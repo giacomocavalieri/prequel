@@ -1,6 +1,6 @@
-name = "er"
+name = "prequel"
 version = "0.1.0"
-description = "A Gleam project"
+description = "A markup language for defining ER schemas"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
@@ -11,6 +11,7 @@ description = "A Gleam project"
 
 [dependencies]
 gleam_stdlib = "~> 0.29"
+non_empty_list = "~> 1.0"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
