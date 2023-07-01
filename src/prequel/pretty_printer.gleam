@@ -1,14 +1,14 @@
+import gleam/bool
+import gleam/int
+import gleam/list
+import gleam/option.{None}
+import gleam/order
 import gleam/string_builder.{StringBuilder}
 import prequel/parser.{
   Attribute, Bounded, Cardinality, Disjoint, Entity, Hierarchy, Key, Module,
   Overlapped, Partial, Relationship, RelationshipEntity, Total, Unbounded,
 }
-import gleam/int
-import gleam/option.{None}
-import gleam/bool
-import gleam/list
 import non_empty_list
-import gleam/order
 
 pub fn pretty(module: Module) -> String {
   let entities =

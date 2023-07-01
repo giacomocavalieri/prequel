@@ -1,13 +1,13 @@
+import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{None, Option, Some}
+import gleam/pair
+import gleam/result
 import gleam/string
 import gleam/string_builder.{StringBuilder}
 import prequel/span.{Span}
 import non_empty_list.{NonEmptyList}
-import gleam/result
-import gleam/pair
-import gleam/int
-import gleam/io
 
 /// A token of the Prequel language.
 /// 
