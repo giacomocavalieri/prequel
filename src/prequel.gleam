@@ -6,6 +6,16 @@ import gleam/result
 pub fn main() {
   let str =
     "
+
+entity pipo_ritto
+
+
+
+
+
+
+
+
 entity prova {
       -o prova
   -* 
@@ -22,6 +32,38 @@ prova
 
 
   -> rel3:(1-1) papa (1-N)
+
+  total overlapped hierarchy {
+         entity bazz
+    entity foo {
+      -o prova
+    }
+    entity bar
+
+    entity baz {
+      partial disjoint hierarchy {
+        entity dog
+      }
+    }
+  }
+}
+
+relationship prova2 {
+  -> ciao : (1-1)
+  -> core : (2-1)
+
+  -o prova
+}
+
+entity pipi_ritti
+
+
+
+
+relationship prova {
+  -> come : (1-1)
+  -> stai : (0-N)
+  -> cane : (3-N)
 }
 "
 

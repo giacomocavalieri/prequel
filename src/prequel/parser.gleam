@@ -236,6 +236,7 @@ pub type Module {
   Module(entities: List(Entity), relationships: List(Relationship))
 }
 
+/// TODO: Cambiare in modo che abbia per costruzione sempre almeno due entità!!!
 /// A relationship as described by the ER model. It involves some entities
 /// and can also have attributes.
 /// 

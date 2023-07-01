@@ -1,17 +1,28 @@
 import gleam/string_builder.{StringBuilder}
 import prequel/parser.{
-  Attribute, Bounded, Cardinality, Entity, Key, Module, Relationship, Unbounded,
+  Attribute, Bounded, Cardinality, Disjoint, Entity, Hierarchy, Key, Module,
+  Overlapped, Partial, Relationship, RelationshipEntity, Total, Unbounded,
 }
 import gleam/int
 import gleam/option.{None}
 import gleam/bool
 import gleam/list
 import non_empty_list
+import gleam/order
 
 pub fn pretty(module: Module) -> String {
-  module.entities
-  |> list.map(pretty_entity(_, 0))
-  |> string_builder.join(with: "\n\n\n")
+  let entities =
+    module.entities
+    |> list.map(pretty_entity(_, 0))
+    |> string_builder.join(with: "\n\n")
+
+  let relationships =
+    module.relationships
+    |> list.map(pretty_relationship)
+    |> string_builder.join(with: "\n\n")
+
+  [entities, relationships]
+  |> string_builder.join(with: "\n\n")
   |> string_builder.to_string()
 }
 
@@ -23,10 +34,12 @@ fn entity_has_empty_body(entity: Entity) -> Bool {
 }
 
 fn pretty_entity(entity: Entity, indentation: Int) -> StringBuilder {
-  let entity_head = string_builder.from_strings(["entity ", entity.name])
+  let entity_head =
+    string_builder.from_strings(["entity ", entity.name])
+    |> indent(by: indentation)
   use <- bool.guard(when: entity_has_empty_body(entity), return: entity_head)
-  indent(entity_head, by: indentation)
-  |> string_builder.append_builder(indent_string(" {\n", by: indentation))
+  entity_head
+  |> string_builder.append(" {\n")
   |> string_builder.append_builder(pretty_entity_body(entity, indentation + 2))
   |> string_builder.append_builder(indent_string("}", by: indentation))
 }
@@ -42,11 +55,22 @@ fn pretty_entity_body(entity: Entity, indentation: Int) -> StringBuilder {
     |> string_builder.join("\n")
   let inner_relationships =
     entity.inner_relationships
+    // Put those with no body first
+    |> list.sort(fn(one, other) {
+      case one.attributes, other.attributes {
+        [_, ..], [] -> order.Gt
+        [], [_, ..] -> order.Lt
+        _, _ -> order.Eq
+      }
+    })
     |> list.map(pretty_inner_relationship(_, entity.name, indentation))
     |> string_builder.join("\n")
+  let hierarchy =
+    entity.children
+    |> option.map(pretty_hierarchy(_, indentation))
+    |> option.unwrap(string_builder.new())
 
-  // TODO SEE IF I HAVE TO REMOVE EMPTY STRING BUILDER TO AVOID WHITE LINES
-  [keys, attributes, inner_relationships]
+  [keys, attributes, inner_relationships, hierarchy]
   |> list.filter(fn(builder) { !string_builder.is_empty(builder) })
   |> string_builder.join("\n\n")
   |> string_builder.append("\n")
@@ -129,6 +153,40 @@ fn pretty_cardinality(cardinality: Cardinality) -> StringBuilder {
   }
 }
 
+fn pretty_hierarchy(hierarchy: Hierarchy, indentation: Int) -> StringBuilder {
+  let totality = case hierarchy.totality {
+    Total -> "total"
+    Partial -> "partial"
+  }
+  let overlapping = case hierarchy.overlapping {
+    Overlapped -> "overlapped"
+    Disjoint -> "disjoint"
+  }
+  let entities =
+    hierarchy.children
+    |> non_empty_list.to_list
+    // Put those with an empty body first 
+    // TODO separate those with an empty body and no comment with a single newline
+    // and not an empty line in between
+    |> list.sort(fn(one, other) {
+      case entity_has_empty_body(one), entity_has_empty_body(other) {
+        False, True -> order.Gt
+        True, False -> order.Lt
+        _, _ -> order.Eq
+      }
+    })
+    |> list.map(pretty_entity(_, indentation + 2))
+    |> string_builder.join("\n\n")
+
+  indent_string(totality, by: indentation)
+  |> string_builder.append(" ")
+  |> string_builder.append(overlapping)
+  |> string_builder.append(" hierarchy {\n")
+  |> string_builder.append_builder(entities)
+  |> string_builder.append("\n")
+  |> string_builder.append_builder(indent_string("}", by: indentation))
+}
+
 fn indent(builder: StringBuilder, by indentation: Int) -> StringBuilder {
   let spaces = string_builder.from_strings(list.repeat(" ", indentation))
   string_builder.append_builder(spaces, builder)
@@ -140,5 +198,33 @@ fn indent_string(string: String, by indentation: Int) -> StringBuilder {
 
 fn pretty_relationship(relationship: Relationship) -> StringBuilder {
   string_builder.new()
-  |> string_builder.append("relationship")
+  |> string_builder.append("relationship ")
+  |> string_builder.append(relationship.name)
+  |> string_builder.append(" {\n")
+  |> string_builder.append_builder(pretty_relationship_body(relationship))
+  |> string_builder.append("}")
+}
+
+fn pretty_relationship_body(relationship: Relationship) -> StringBuilder {
+  let entities =
+    relationship.entities
+    |> list.map(pretty_relationship_entity)
+    |> list.map(indent(_, by: 2))
+    |> string_builder.join(with: "\n")
+
+  let attributes =
+    relationship.attributes
+    |> list.map(pretty_attribute(_, 2))
+    |> string_builder.join(with: "\n")
+
+  [entities, attributes]
+  |> list.filter(fn(builder) { !string_builder.is_empty(builder) })
+  |> string_builder.join(with: "\n\n")
+  |> string_builder.append("\n")
+}
+
+fn pretty_relationship_entity(entity: RelationshipEntity) -> StringBuilder {
+  ["-> ", entity.name, " : "]
+  |> string_builder.from_strings
+  |> string_builder.append_builder(pretty_cardinality(entity.cardinality))
 }
