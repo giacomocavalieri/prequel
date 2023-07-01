@@ -1,233 +1,14 @@
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/option.{None, Option, Some}
 import gleam/pair
 import gleam/result
-import gleam/string
-import gleam/string_builder.{StringBuilder}
+import prequel/internals/scanner.{
+  Ampersand, ArrowLollipop, CircleLollipop, CloseBracket, CloseParens, Colon,
+  Minus, Number, OpenBracket, OpenParens, StarLollipop, Token, Word,
+}
 import prequel/span.{Span}
 import non_empty_list.{NonEmptyList}
-
-/// A token of the Prequel language.
-/// 
-type Token {
-  OpenBracket
-  CloseBracket
-  OpenParens
-  CloseParens
-  Colon
-  CircleLollipop
-  StarLollipop
-  ArrowLollipop
-  Minus
-  Ampersand
-  ModuleComment(content: String)
-  TopLevelComment(content: String)
-  SimpleComment(content: String)
-  Number(value: String)
-  Word(value: String)
-}
-
-/// Given a source code string scans it in a list of pairs composed of a
-/// token and its span in the source code.
-/// 
-fn scan(source: String) -> List(#(Token, Span)) {
-  do_scan(source, 1, 1, [])
-}
-
-/// A tail recursive version of scan that scans the source code in a list of
-/// tokens and their respective span.
-/// It has as additional state the current line and column inside the source
-/// code and an accumulator with the tokens scanned so far.
-/// 
-fn do_scan(
-  source: String,
-  line: Int,
-  column: Int,
-  acc: List(#(Token, Span)),
-) -> List(#(Token, Span)) {
-  case source {
-    "" -> list.reverse(acc)
-    "\n" <> rest -> do_scan(rest, line + 1, 1, acc)
-    " " <> rest | "\t" <> rest | "\r" <> rest ->
-      do_scan(rest, line, column + 1, acc)
-    "{" <> rest -> {
-      let lexeme = #(OpenBracket, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    "}" <> rest -> {
-      let lexeme = #(CloseBracket, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    "(" <> rest -> {
-      let lexeme = #(OpenParens, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    ")" <> rest -> {
-      let lexeme = #(CloseParens, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    ":" <> rest -> {
-      let lexeme = #(Colon, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    "-o" <> rest -> {
-      let lexeme = #(CircleLollipop, span.segment(line, column, column + 1))
-      do_scan(rest, line, column + 2, [lexeme, ..acc])
-    }
-    "-*" <> rest -> {
-      let lexeme = #(StarLollipop, span.segment(line, column, column + 1))
-      do_scan(rest, line, column + 2, [lexeme, ..acc])
-    }
-    "->" <> rest -> {
-      let lexeme = #(ArrowLollipop, span.segment(line, column, column + 1))
-      do_scan(rest, line, column + 2, [lexeme, ..acc])
-    }
-    "-" <> rest -> {
-      let lexeme = #(Minus, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    "&" <> rest -> {
-      let lexeme = #(Ampersand, span.point(line, column))
-      do_scan(rest, line, column + 1, [lexeme, ..acc])
-    }
-    "////" <> rest -> {
-      let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 3)
-      let lexeme = #(ModuleComment(comment_body), span)
-      do_scan(rest, line + 1, 1, [lexeme, ..acc])
-    }
-    "///" <> rest -> {
-      let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 2)
-      let lexeme = #(TopLevelComment(comment_body), span)
-      do_scan(rest, line + 1, 1, [lexeme, ..acc])
-    }
-    "//" <> rest -> {
-      let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 1)
-      let lexeme = #(SimpleComment(comment_body), span)
-      do_scan(rest, line + 1, 1, [lexeme, ..acc])
-    }
-    "0" <> _
-    | "1" <> _
-    | "2" <> _
-    | "3" <> _
-    | "4" <> _
-    | "5" <> _
-    | "6" <> _
-    | "7" <> _
-    | "8" <> _
-    | "9" <> _ -> {
-      let #(number, size, rest) = scan_number(string_builder.new(), 0, source)
-      let span = span.segment(line, column, column + size - 1)
-      let lexeme = #(Number(number), span)
-      do_scan(rest, line, column + size, [lexeme, ..acc])
-    }
-    rest -> {
-      let #(word, size, rest) = scan_word(string_builder.new(), 0, rest)
-      let lexeme = #(Word(word), span.segment(line, column, column + size - 1))
-      do_scan(rest, line, column + size, [lexeme, ..acc])
-    }
-  }
-}
-
-/// A tail recursive function that scans the body of a comment stopping at the
-/// first newline it finds. It has as additional state a string builder with
-/// the body of the comment scanned so far and its size (in terms of number
-/// of graphemes it's made of).
-/// 
-/// It returns the scanned comment body, its size and the remaining unscanned
-/// source code.
-/// 
-fn scan_comment_body(
-  acc: StringBuilder,
-  size: Int,
-  source: String,
-) -> #(String, Int, String) {
-  case source {
-    "\r\n" <> rest | "\n" <> rest -> #(
-      string_builder.to_string(acc),
-      size,
-      rest,
-    )
-    rest ->
-      case string.pop_grapheme(rest) {
-        Error(Nil) -> #(string_builder.to_string(acc), size, rest)
-        Ok(#(grapheme, rest)) ->
-          scan_comment_body(
-            string_builder.append(acc, grapheme),
-            size + 1,
-            rest,
-          )
-      }
-  }
-}
-
-/// A tail recursive function that scans a number.
-/// It has as additional state a string builder with the number scanned so far
-/// and the its size (in terms if number of digits).
-/// 
-/// It returns the scanned number, its size and the remaining unscanned source
-/// code.
-/// 
-fn scan_number(
-  acc: StringBuilder,
-  size: Int,
-  content: String,
-) -> #(String, Int, String) {
-  case content {
-    "0" <> rest -> scan_number(string_builder.append(acc, "0"), size + 1, rest)
-    "1" <> rest -> scan_number(string_builder.append(acc, "1"), size + 1, rest)
-    "2" <> rest -> scan_number(string_builder.append(acc, "2"), size + 1, rest)
-    "3" <> rest -> scan_number(string_builder.append(acc, "3"), size + 1, rest)
-    "4" <> rest -> scan_number(string_builder.append(acc, "4"), size + 1, rest)
-    "5" <> rest -> scan_number(string_builder.append(acc, "5"), size + 1, rest)
-    "6" <> rest -> scan_number(string_builder.append(acc, "6"), size + 1, rest)
-    "7" <> rest -> scan_number(string_builder.append(acc, "7"), size + 1, rest)
-    "8" <> rest -> scan_number(string_builder.append(acc, "8"), size + 1, rest)
-    "9" <> rest -> scan_number(string_builder.append(acc, "9"), size + 1, rest)
-    rest -> #(string_builder.to_string(acc), size, rest)
-  }
-}
-
-/// A tail recursive function that scans a word (any sequence of graphemes with
-/// an exception for parentheses, colons, whitespaces and comments).
-/// It has as additional state a string builder with the word scanned so far
-/// and the its size (in terms if number of digits).
-/// 
-/// It returns the scanned word, its size and the remaining unscanned source code.
-/// 
-fn scan_word(
-  acc: StringBuilder,
-  size: Int,
-  source: String,
-) -> #(String, Int, String) {
-  case source {
-    "//" <> _
-    | "///" <> _
-    | "////" <> _
-    | ":" <> _
-    | "(" <> _
-    | ")" <> _
-    | "{" <> _
-    | "}" <> _
-    | " " <> _
-    | "\n" <> _
-    | "\r" <> _
-    | "\t" <> _ -> #(string_builder.to_string(acc), size, source)
-    rest ->
-      case string.pop_grapheme(rest) {
-        Error(Nil) -> #(string_builder.to_string(acc), size, rest)
-        Ok(#(grapheme, rest)) ->
-          scan_word(string_builder.append(acc, grapheme), size + 1, rest)
-      }
-  }
-}
 
 /// A module is the result obtained by parsing a file, it contains a list of
 /// entities and relationships.
@@ -237,8 +18,8 @@ pub type Module {
 }
 
 /// TODO: Cambiare in modo che abbia per costruzione sempre almeno due entità!!!
-/// A relationship as described by the ER model. It involves some entities
-/// and can also have attributes.
+/// A relationship as described by the ER model. It always involves at least
+/// two entities and can also have attributes.
 /// 
 pub type Relationship {
   Relationship(
@@ -272,8 +53,8 @@ pub type Entity {
   )
 }
 
-/// An attribute that can be part of an entity or a relationship.
-/// It has a name, a cardinality and a type. 
+/// An attribute that can be found inside the body of an entity or a
+/// relationship.
 /// 
 pub type Attribute {
   Attribute(span: Span, name: String, cardinality: Cardinality, type_: Type)
@@ -350,7 +131,11 @@ fn overlapping_from_string(string: String) -> Result(Overlapping, Nil) {
 
 /// TODO!!!
 pub fn parse(source: String) -> Result(Module, Nil) {
-  use #(entities, relationships) <- result.map(do_parse(scan(source), [], []))
+  use #(entities, relationships) <- result.map(do_parse(
+    scanner.scan(source),
+    [],
+    [],
+  ))
   Module(entities, relationships)
 }
 
@@ -375,13 +160,13 @@ fn do_parse(
   }
 }
 
-/// An intermediate result of the parsing process, if the parsing step succeeds it holds
-/// a pair with the remaining tokens and a result of type `a`.
+/// An intermediate result of the parsing process, if the parsing step succeeds
+/// it holds a pair with the remaining tokens and a result of type `a`.
 /// 
 type ParseResult(a) =
   Result(#(a, List(#(Token, Span))), Nil)
 
-/// Parse an entity once the 'entity' word was found.
+/// Parse an entity once the `entity` keyword was already found.
 /// 
 fn parse_entity(tokens: List(#(Token, Span))) -> ParseResult(Entity) {
   case tokens {
@@ -401,9 +186,12 @@ fn parse_entity(tokens: List(#(Token, Span))) -> ParseResult(Entity) {
   }
 }
 
-/// In the context of entity parsing, parses the body of an entity expecting a
-/// closed bracked '}' at the end of it.
-/// Returns the parsed entity.
+/// Once an open bracket `{` is found, this function can be called to parse
+/// the body of an entity. It expects the body to be closed by a closed
+/// bracket `}`.
+/// 
+/// It returns the completely parsed entity using the `name` and `name_span`
+/// passed as arguments.
 /// 
 fn parse_entity_body(
   tokens: List(#(Token, Span)),
@@ -415,7 +203,7 @@ fn parse_entity_body(
   children: Option(Hierarchy),
 ) -> ParseResult(Entity) {
   case tokens {
-    // When a close bracket '}' is found the entity parsing is done.
+    // If a '}' is found, the entity parsing is done.
     // Returns the entity built from the function accumulators along with the
     // remaining tokens in the input.
     [#(CloseBracket, _), ..tokens] ->
@@ -430,7 +218,7 @@ fn parse_entity_body(
       |> pair.new(tokens)
       |> Ok
 
-    // Parse any of the elements that can be found inside an entity body.
+    // If a `-o` is found, switches into attribute parsing.
     [#(CircleLollipop, _), ..tokens] -> {
       use #(attribute, tokens) <- result.try(parse_attribute(tokens))
       parse_entity_body(
@@ -443,6 +231,9 @@ fn parse_entity_body(
         children,
       )
     }
+
+    // If a `-*` is found, switches into key parsing. TODO REWORK THIS ONCE THE
+    // AST IS CHANGED TO TAKE INTO ACCOUNT SHORTHAND KEYS
     [#(StarLollipop, _), ..tokens] -> {
       use #(#(key, attribute), tokens) <- result.try(parse_key(tokens, []))
       case attribute {
@@ -468,6 +259,8 @@ fn parse_entity_body(
           )
       }
     }
+
+    // If a `->` is found, switches into relationship parsing.
     [#(ArrowLollipop, _), ..tokens] -> {
       let result = parse_inner_relationship(tokens, name, name_span)
       use #(relationship, tokens) <- result.try(result)
@@ -481,13 +274,14 @@ fn parse_entity_body(
         children,
       )
     }
+
+    // If a `total` or `partial` word is found, switches into hierarchy parsing.
     [#(Word("total" as word), span), ..tokens]
     | [#(Word("partial" as word), span), ..tokens] -> {
       case children {
         Some(_) -> todo("error about duplicate hierarchy")
         None -> {
           use totality <- result.try(totality_from_string(word))
-          //|> result.replace_error(todo("internal error should never happen")),
           let result = parse_hierarchy(tokens, span, totality)
           use #(children, tokens) <- result.try(result)
           parse_entity_body(
@@ -503,21 +297,21 @@ fn parse_entity_body(
       }
     }
 
-    // Catch some common mistakes to provide better error messages: in case one writes
-    // the lollipops with a space between the minus and its head it is reported as an
-    // error with a suggestion to fix the mistake.
+    // If someone writes `- o`, `- *` or `- >` it tells them there's possibly
+    // a spelling mistake and suggests a fix.
     [#(Minus, _), #(Word("o"), _), ..] -> todo("error message about typo")
     [#(Minus, _), #(Word("*"), _), ..] -> todo("error message about typo")
     [#(Minus, _), #(Word(">"), _), ..] -> todo("error message about typo")
 
-    // Catch some common mistakes to provide better error messages: in case one writes
-    // the hierarchy modifiers in the wrong order that is detected and reported as an
-    // error with a suggestion to fix the mistake.
+    // If someone writes the qualifiers of a hierarchy in the wrong order (i.e.
+    // first overlapping and then the other) it tells them the correct order and
+    // suggests a fix.
     [#(Word("overlapped"), span), ..] -> todo("error message about wrong order")
-    [#(Word("overlapping"), span), ..] ->
-      todo("error message about wrong order")
+    [#(Word("overlapping"), span), ..] -> todo("wrong order")
     [#(Word("disjoint"), span), ..] -> todo("error message about wrong order")
 
+    // If someone writes a hierarchy without the qualifiers it tells them that
+    // it should have qualifiers like overlapping etc.
     [#(Word("hierarchy"), span), ..] -> todo("hierarchy should be qualified")
 
     [#(token, _), ..] -> todo("unexpected token")
@@ -529,7 +323,10 @@ fn parse_entity_body(
 /// 
 fn parse_attribute(tokens: List(#(Token, Span))) -> ParseResult(Attribute) {
   case tokens {
-    // Parse an attribute that has a name and a type/cardinality annotation.
+    // Parses an attribute that has a name and a type/cardinality annotation.
+    // It is lenient and accepts no cardinality annotation only if there is a
+    // type; otherwise it raises an error since the `:` is not followed by
+    // anything.
     [#(Word(name), name_span), #(Colon, _), ..tokens] -> {
       use #(type_, tokens) <- result.try(parse_attribute_type(tokens))
       let should_be_lenient = type_ != NoType
@@ -538,7 +335,8 @@ fn parse_attribute(tokens: List(#(Token, Span))) -> ParseResult(Attribute) {
       #(Attribute(name_span, name, cardinality, type_), tokens)
     }
 
-    // Parse an attribute that has no type/cardinality annotation.
+    // Parse an attribute that has no type/cardinality annotation, the default
+    // cardinality of (1-1) is used.
     [#(Word(name), name_span), ..tokens] ->
       Attribute(name_span, name, Bounded(1, 1), NoType)
       |> pair.new(tokens)
@@ -549,6 +347,8 @@ fn parse_attribute(tokens: List(#(Token, Span))) -> ParseResult(Attribute) {
   }
 }
 
+/// Parses the type of an attribute once `:` is found.
+/// 
 fn parse_attribute_type(tokens: List(#(Token, Span))) -> ParseResult(Type) {
   // TODO: actually parse a type! But I have to think long and hard about
   //       types before adding them.
@@ -578,7 +378,7 @@ fn parse_cardinality(
   lenient: Bool,
 ) -> ParseResult(Cardinality) {
   case tokens {
-    // Parse a bounded cardinality.
+    // Parses a bounded cardinality in the form `(<number> - <number>)`.
     [
       #(OpenParens, _),
       #(Number(raw_lower), _),
@@ -587,13 +387,12 @@ fn parse_cardinality(
       #(CloseParens, _),
       ..tokens
     ] -> {
-      // An error here should never occur! Wrap it in a bug report error!
       use lower <- result.try(int.parse(raw_lower))
       use upper <- result.map(int.parse(raw_upper))
       #(Bounded(lower, upper), tokens)
     }
 
-    // Parse an unbounded cardinality.
+    // Parse an unbounded cardinality in the form `(<number> - N)`.
     [
       #(OpenParens, _),
       #(Number(raw_lower), _),
@@ -606,47 +405,63 @@ fn parse_cardinality(
       #(Unbounded(lower), tokens)
     }
 
-    // Catch some common mistakes to provide better error messages: in case one writes
-    // the unbounded part of the cardinality with a letter different from N that is
-    // detected and reported as an error to fix the mistake.
+    // If one writes a letter that is not `N` in an unbounded cardinality, it
+    // tells them there's an error and suggests a fix.
     [
       #(OpenParens, _),
-      #(Number(raw_lower), _),
+      #(Number(_), _),
       #(Minus, _),
-      #(Word(other), _),
+      #(Word(_), _),
       #(CloseParens, _),
       ..
     ] -> todo("wrong letter in unbounded cardinality")
 
-    // TODO: document these choices
+    // If the cardinality is correct but is missing the closing parentheses. 
     [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Number(_), _), ..]
     | [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Word(_), _), ..] ->
       todo("there should be a closed parens here")
+
+    // If the cardinality is (mostly) correct but is missing the second number.
     [#(OpenParens, _), #(Number(_), _), #(Minus, _), ..] ->
       todo("there should be a number or an N here")
+
+    // If the cardinality is (mostly) correct but is missing the `-`.
     [#(OpenParens, _), #(Number(_), _), ..] ->
       todo("there should be a minus here")
+
+    // If there is an `(` but nothing else making it a cardinality.
     [#(OpenParens, _), ..] -> todo("there should be a number here")
 
+    // If there is a number it suggests that they probably forgot the `(`.
     [#(Number(n), _), ..] -> todo("probably missing open parens before number")
 
+    // If it is lenient and did not incur in any obvious mistake it defaults
+    // to the `(1-1)` cardinality.
     [_, ..] if lenient -> Ok(#(Bounded(1, 1), tokens))
+
     [#(token, span), ..] -> todo("unexpected token")
     [] -> todo("unexpected EOF")
   }
 }
 
+/// Parses a key once the `-*` is found.
+/// 
 fn parse_key(
   tokens: List(#(Token, Span)),
   keys: List(String),
 ) -> ParseResult(#(Key, Option(Attribute))) {
   case tokens {
+    // If there is a multi-item key with an `&` it switches to multi-key
+    // parsing.
     [#(Word(key), span), #(Ampersand, _), ..tokens] -> {
       let result = parse_multi_attribute_key(tokens, span, [key, ..keys])
       use #(key, tokens) <- result.map(result)
       #(#(key, None), tokens)
     }
 
+    // If there is a `:` after the key name it switches to parsing a key
+    // shorthand for attribute definition.
+    // TODO SISTEMARE
     [#(Word(key), span), #(Colon, _), ..tokens] -> {
       use #(type_, tokens) <- result.map(parse_attribute_type(tokens))
       case type_ {
@@ -659,6 +474,9 @@ fn parse_key(
       }
     }
 
+    // If there is only a word it switches to parsing a key shorthand for an
+    // attribute definition. (But it may also be a key alone and attribute
+    // is duplicate TODO)
     [#(Word(key), span), ..tokens] ->
       Key(span, non_empty_list.new(key, keys))
       |> pair.new(None)
@@ -670,18 +488,24 @@ fn parse_key(
   }
 }
 
+/// Parses a multi attribute key once an `&` is found.
+/// 
 fn parse_multi_attribute_key(
   tokens: List(#(Token, Span)),
   initial_span: Span,
   keys: List(String),
 ) -> ParseResult(Key) {
   case tokens {
+    // If there is another `&` it keeps going.
     [#(Word(key), _), #(Ampersand, _), ..tokens] ->
       parse_multi_attribute_key(tokens, initial_span, [key, ..keys])
 
+    // If there is a `:` it reports an error since a multi-key cannot
+    // have a type annotation.
     [#(Word(_), _), #(Colon, _), ..] ->
       todo("error no type annotation in multi element key")
 
+    // If there is a word not followed by `&` it is done parsing the key.
     [#(Word(key), final_span), ..tokens] ->
       initial_span
       |> span.merge(with: final_span)
@@ -694,6 +518,9 @@ fn parse_multi_attribute_key(
   }
 }
 
+/// Parses a relationship shorthand after finding a `->` inside a relationship
+/// body.
+/// 
 fn parse_inner_relationship(
   tokens: List(#(Token, Span)),
   entity_name: String,
@@ -745,29 +572,42 @@ fn parse_inner_relationship(
       }
     }
 
+    // If there is no `:` it is reported as an error since a cardinality is
+    // always needed.
     [#(Word(name), _), ..] ->
       todo("inner relationship missing cardinality annotation")
 
     [#(token, _), ..] -> todo("I was expecting a word here")
-
     [] -> todo("unexpected EOF")
   }
 }
 
+/// Parses the body of an inner relationship once its `{` is found.
+/// 
 fn parse_inner_relationship_body(
   tokens: List(#(Token, Span)),
   attributes: List(Attribute),
 ) -> ParseResult(List(Attribute)) {
   case tokens {
+    // When a `}` is met, ends the parsing and returns the parsed attributes.
     [#(CloseBracket, _), ..tokens] -> Ok(#(list.reverse(attributes), tokens))
 
+    // When a `-o` is met, switches to parsing an attribute.
     [#(CircleLollipop, _), ..tokens] -> {
       use #(attribute, tokens) <- result.try(parse_attribute(tokens))
       parse_inner_relationship_body(tokens, [attribute, ..attributes])
     }
 
+    // When a `-*` is found reports an error since a relationship cannot
+    // have a key inside.
     [#(StarLollipop, _), ..] -> todo("a relationship cannot have a key inside")
+
+    // When a `->` is found reports an error since a relationship cannot
+    // have another relationship inside.
     [#(ArrowLollipop, _), ..] -> todo("a short rel cannot have other rels")
+
+    // If someone writes `- o` it tells them there's possibly
+    // a spelling mistake and suggests a fix.
     [#(Minus, _), #(Word("o"), _), ..] -> todo("possible typo")
 
     [#(token, _), ..] -> todo("unexpected token")
@@ -775,16 +615,25 @@ fn parse_inner_relationship_body(
   }
 }
 
+/// Parses a hierarchy after finding the `total`/`partial` keyword.
+/// 
 fn parse_hierarchy(
   tokens: List(#(Token, Span)),
   initial_span: Span,
   totality: Totality,
 ) -> ParseResult(Hierarchy) {
   case tokens {
+    // If someone writes `overlapping` instead of `overlapped`, tells them
+    // this is a mistake and suggests the correct spelling.
     [#(Word("overlapping"), _), ..tokens] -> todo("error about wrong spelling")
+
+    // If someone writes `hierarchy` without specifying the overlapping of
+    // the hierarchy, tells them this is a mistake and suggests a correction.
     [#(Word("hierarchy"), _), ..tokens] ->
       todo("error about missing overlapping")
 
+    // If the correct overlapping and the `hierarchy` keyword are found,
+    // switches to parsing the hierarchy's body.
     [
       #(Word("overlapped" as word), _),
       #(Word("hierarchy"), final_span),
@@ -806,10 +655,14 @@ fn parse_hierarchy(
       |> pair.new(tokens)
     }
 
+    // If there is the correct overlapping but no `hierarchy` keyword,
+    // reports the missing keyword and suggests a fix.
     [#(Word("overlapped"), _), #(OpenBracket, _), ..]
     | [#(Word("disjoint"), _), #(OpenBracket, _), ..] ->
       todo("missing hierarchy keyword error")
 
+    // If there is no `{`, reports the error since a hierarchy cannot
+    // have an empty body.
     [#(Word("overlapped"), _), #(Word("hierarchy"), _), ..]
     | [#(Word("disjoint"), _), #(Word("hierarchy"), _), ..] ->
       todo("missing hierarchy body with {}")
@@ -819,11 +672,15 @@ fn parse_hierarchy(
   }
 }
 
+/// Parses the body of a hierarchy after finding its `{`.
+/// 
 fn parse_hierarchy_body(
   tokens: List(#(Token, Span)),
   entities: List(Entity),
 ) -> ParseResult(NonEmptyList(Entity)) {
   case tokens {
+    // If a `}` is found ends the parsing process. A check is performed to
+    // guarantee that there was at least an entity in the hierarchy's body.
     [#(CloseBracket, _), ..tokens] -> {
       use entities <- result.map(
         entities
@@ -831,34 +688,45 @@ fn parse_hierarchy_body(
         |> non_empty_list.from_list
         |> result.replace_error(Nil),
       )
-      // Nice error about hierarchy not having empty body
       #(entities, tokens)
     }
 
+    // If the `entity` keyword is found, switches to entity parsing.
     [#(Word("entity"), _), ..tokens] -> {
       use #(entity, tokens) <- result.try(parse_entity(tokens))
       parse_hierarchy_body(tokens, [entity, ..entities])
     }
 
+    // If the `relationship` keyword is found, reports it as an error since
+    // a hierarchy cannot have a relationship defined inside it.
     [#(Word("relationship"), _), ..] -> todo("error no rels inside hierarchy")
     [#(token, span), ..] -> todo("unexpected token")
     [] -> todo("unepected EOF")
   }
 }
 
-/// Relationship keyword already found.
+/// Parses a relationship after finding the `relationship` keyword.
 /// 
 fn parse_relationship(tokens: List(#(Token, Span))) -> ParseResult(Relationship) {
   case tokens {
+    // If there is the name and an `{` switches to parsing the relationship's
+    // body.
     [#(Word(name), name_span), #(OpenBracket, _), ..tokens] ->
       parse_relationship_body(tokens, name, name_span, [], [])
+
+    // If there is the relationship's name but no `{` reports it as an error
+    // since a relationship must always have a body.
     [#(Word(name), _), ..] -> todo("missing rel body")
+
+    // If there is no name before the `{`, reports the missing name as an error.
     [#(OpenBracket, _), ..rest] -> todo("missing name error")
+
+    [#(token, _), ..] -> todo("unexpected token")
     [] -> todo("unexpected EOF")
   }
 }
 
-/// Open bracket already found.
+/// Parses the body of a relationship after finding a `{`.
 /// 
 fn parse_relationship_body(
   tokens: List(#(Token, Span)),
@@ -868,11 +736,14 @@ fn parse_relationship_body(
   attributes: List(Attribute),
 ) -> ParseResult(Relationship) {
   case tokens {
+    // If a `}` is found. Ends the parsing process and returns the parsed
+    // relationship.
     [#(CloseBracket, _), ..tokens] ->
       Relationship(name_span, name, entities, attributes)
       |> pair.new(tokens)
       |> Ok
 
+    // If a `-o` is found, switch to attribute parsing.
     [#(CircleLollipop, _), ..tokens] -> {
       use #(attribute, tokens) <- result.try(parse_attribute(tokens))
       parse_relationship_body(
@@ -884,6 +755,7 @@ fn parse_relationship_body(
       )
     }
 
+    // If a `->` is found, switch to entity parsing.
     [#(ArrowLollipop, _), ..tokens] -> {
       use #(entity, tokens) <- result.try(parse_relationship_entity(tokens))
       parse_relationship_body(
@@ -894,29 +766,35 @@ fn parse_relationship_body(
         attributes,
       )
     }
+
+    // If a `-*` is found, reports the error since a relationship cannot have
+    // a key.
     [#(StarLollipop, _), ..] -> todo("a relationship cannot have a key")
+
+    // If someone writes `- o` or `- >` it tells them there's possibly
+    // a spelling mistake and suggests a fix.
     [#(Minus, _), #(Word("o"), _), ..] -> todo("typo error")
     [#(Minus, _), #(Word(">"), _), ..] -> todo("typo error")
 
-    [#(token, _), ..] -> {
-      io.debug(token)
-      todo("unexpected token")
-    }
+    [#(token, _), ..] -> todo("unexpected token")
     [] -> todo("unexpected eof")
   }
 }
 
-/// -> was already found.
+/// Parses an entity of a relationship after finding a `->`.
 /// 
 fn parse_relationship_entity(
   tokens: List(#(Token, Span)),
 ) -> ParseResult(RelationshipEntity) {
   case tokens {
+    // In case the entity name and a `:` is found, switches to parsing
+    // the cardinality of the entity.
     [#(Word(name), name_span), #(Colon, _), ..tokens] -> {
       use #(cardinality, tokens) <- result.map(parse_cardinality(tokens, False))
       #(RelationshipEntity(name_span, name, cardinality), tokens)
     }
 
+    // In case there is no cardinality annotation, reports it as an error
     [#(Word(_), _), ..] -> todo("missing cardinality annotation")
 
     [#(token, _), ..] -> todo("unexpected token")
