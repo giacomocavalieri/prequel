@@ -108,6 +108,8 @@ fn pretty_inner_relationship(
   // TODO: Maybe I should handle this gracefully in some other way?
   let assert #([outer_entity], [inner_entity]) =
     inner_relationship.entities
+    |> non_empty_list.prepend(inner_relationship.entity)
+    |> non_empty_list.to_list
     |> list.partition(fn(entity) { entity.name == entity_name })
 
   let inner_relationship_head =
@@ -209,6 +211,8 @@ fn pretty_relationship(relationship: Relationship) -> StringBuilder {
 fn pretty_relationship_body(relationship: Relationship) -> StringBuilder {
   let entities =
     relationship.entities
+    |> non_empty_list.prepend(relationship.entity)
+    |> non_empty_list.to_list
     |> list.map(pretty_relationship_entity)
     |> list.map(indent(_, by: 2))
     |> string_builder.join(with: "\n")

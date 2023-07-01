@@ -17,7 +17,6 @@ pub type Module {
   Module(entities: List(Entity), relationships: List(Relationship))
 }
 
-/// TODO: Cambiare in modo che abbia per costruzione sempre almeno due entità!!!
 /// A relationship as described by the ER model. It always involves at least
 /// two entities and can also have attributes.
 /// 
@@ -25,8 +24,8 @@ pub type Relationship {
   Relationship(
     span: Span,
     name: String,
-    // TODO: Make this a nonempty list
-    entities: List(RelationshipEntity),
+    entity: RelationshipEntity,
+    entities: NonEmptyList(RelationshipEntity),
     attributes: List(Attribute),
   )
 }
@@ -553,21 +552,26 @@ fn parse_inner_relationship(
             RelationshipEntity(entity_span, entity_name, one_cardinality)
           let other_entity =
             RelationshipEntity(other_name_span, other_name, other_cardinality)
-          let entities = [one_entity, other_entity]
+            |> non_empty_list.single
 
           case tokens {
             // Finally if there's an open bracket we parse the relationship body...
             [#(OpenBracket, _), ..tokens] -> {
               let result = parse_inner_relationship_body(tokens, [])
               use #(attributes, tokens) <- result.map(result)
-              relationship_span
-              |> Relationship(relationship_name, entities, attributes)
+              Relationship(
+                relationship_span,
+                relationship_name,
+                one_entity,
+                other_entity,
+                attributes,
+              )
               |> pair.new(tokens)
             }
             // Otherwise return a relationship with no body.
             _ ->
               relationship_span
-              |> Relationship(relationship_name, entities, [])
+              |> Relationship(relationship_name, one_entity, other_entity, [])
               |> pair.new(tokens)
               |> Ok
           }
@@ -744,9 +748,14 @@ fn parse_relationship_body(
     // If a `}` is found. Ends the parsing process and returns the parsed
     // relationship.
     [#(CloseBracket, _), ..tokens] ->
-      Relationship(name_span, name, entities, attributes)
-      |> pair.new(tokens)
-      |> Ok
+      case entities {
+        [one_entity, other_entity, ..other_entities] ->
+          non_empty_list.new(other_entity, other_entities)
+          |> Relationship(name_span, name, one_entity, _, attributes)
+          |> pair.new(tokens)
+          |> Ok
+        _ -> todo("not enough entities in the relationship")
+      }
 
     // If a `-o` is found, switch to attribute parsing.
     [#(CircleLollipop, _), ..tokens] -> {
