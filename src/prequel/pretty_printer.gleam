@@ -4,7 +4,7 @@ import gleam/list
 import gleam/option.{None}
 import gleam/order
 import gleam/string_builder.{StringBuilder}
-import prequel/parser.{
+import prequel.{
   Attribute, Bounded, Cardinality, Disjoint, Entity, Hierarchy, Key, Module,
   Overlapped, Partial, Relationship, RelationshipEntity, Total, Unbounded,
 }
@@ -22,6 +22,7 @@ pub fn pretty(module: Module) -> String {
     |> string_builder.join(with: "\n\n")
 
   [entities, relationships]
+  |> list.filter(fn(builder) { !string_builder.is_empty(builder) })
   |> string_builder.join(with: "\n\n")
   |> string_builder.to_string()
 }
