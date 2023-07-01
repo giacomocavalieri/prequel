@@ -164,7 +164,7 @@ fn do_parse(
 /// it holds a pair with the remaining tokens and a result of type `a`.
 /// 
 type ParseResult(a) =
-  #(Result(a, ParseError), List(#(Token, Span)))
+  #(Result(a, List(ParseError)), List(#(Token, Span)))
 
 fn try(
   result: ParseResult(a),
@@ -191,9 +191,9 @@ fn parse_entity(tokens: List(#(Token, Span))) -> ParseResult(Entity) {
       |> Ok
       |> pair.new(tokens)
 
-    [#(OpenBracket, _), ..] -> todo("error about missing name")
-    [#(token, span), ..] -> todo("error about wrong name")
-    [] -> todo("unexpected EOF")
+    [#(OpenBracket, _), ..] -> todo("E001")
+    [#(token, span), ..] -> todo("E002")
+    [] -> todo("E003-entity")
   }
 }
 
@@ -290,7 +290,8 @@ fn parse_entity_body(
     [#(Word("total" as word), span), ..tokens]
     | [#(Word("partial" as word), span), ..tokens] -> {
       case children {
-        Some(_) -> todo("error about duplicate hierarchy")
+        Some(_) ->
+          todo("E004 move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
         None -> {
           // Todo wrap in an internal error!
           let assert Ok(totality) = totality_from_string(word)
@@ -310,23 +311,27 @@ fn parse_entity_body(
 
     // If someone writes `- o`, `- *` or `- >` it tells them there's possibly
     // a spelling mistake and suggests a fix.
-    [#(Minus, _), #(Word("o"), _), ..] -> todo("error message about typo")
-    [#(Minus, _), #(Word("*"), _), ..] -> todo("error message about typo")
-    [#(Minus, _), #(Word(">"), _), ..] -> todo("error message about typo")
+    [#(Minus, _), #(Word("o"), _), ..] -> todo("E005")
+    [#(Minus, _), #(Word("*"), _), ..] -> todo("E006")
+    [#(Minus, _), #(Word(">"), _), ..] -> todo("E007")
 
     // If someone writes the qualifiers of a hierarchy in the wrong order (i.e.
     // first overlapping and then the other) it tells them the correct order and
     // suggests a fix.
-    [#(Word("overlapped"), span), ..] -> todo("error message about wrong order")
-    [#(Word("overlapping"), span), ..] -> todo("wrong order")
-    [#(Word("disjoint"), span), ..] -> todo("error message about wrong order")
+    [#(Word("overlapped"), span), ..] -> todo("E008")
+    [#(Word("overlapping"), span), ..] -> todo("E008")
+    [#(Word("disjoint"), span), ..] -> todo("E008")
 
     // If someone writes a hierarchy without the qualifiers it tells them that
     // it should have qualifiers like overlapping etc.
-    [#(Word("hierarchy"), span), ..] -> todo("hierarchy should be qualified")
+    [#(Word("hierarchy"), span), ..] -> todo("E009")
 
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    // If someone tries to define a relationship inside an entity it tells them
+    // that this can only be done at the top level.
+    [#(Word("relationship"), span), ..] -> todo("E010")
+
+    [#(token, _), ..] -> todo("E011")
+    [] -> todo("E003")
   }
 }
 
@@ -821,16 +826,25 @@ fn parse_relationship_entity(
     }
 
     // In case there is no cardinality annotation, reports it as an error
-    [#(Word(name), name_span), ..tokens] -> {
-      Error(MissingCardinalityFromRelationshipEntity(name, name_span))
-      |> pair.new(tokens)
-    }
+    [#(Word(name), name_span), ..tokens] -> todo("")
 
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected eof")
+    [#(token, span), ..tokens] -> todo("")
+
+    [] -> todo("")
   }
 }
 
+fn parse_error(
+  error: ParseError,
+  tokens: List(#(Token, Span)),
+) -> ParseResult(a) {
+  #(Error([error]), tokens)
+}
+
 pub type ParseError {
-  MissingCardinalityFromRelationshipEntity(name: String, name_span: Span)
+  DummyParseError
+}
+
+pub type ParsingContext {
+  DummyContext
 }
