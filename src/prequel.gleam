@@ -359,23 +359,25 @@ fn parse_attribute_type(tokens: List(#(Token, Span))) -> ParseResult(Type) {
   Ok(#(NoType, tokens))
 }
 
-/// Parses a cardinality. If `lenient` is true it can recover with a default cardinality
-/// of (1-1). However, recovery is not guaranteed, for example in some cases there could
+/// Parses a cardinality. If `lenient` is true it can recover with a default
+/// cardinality of (1-1).
+/// However, recovery is not guaranteed, for example in some cases there could
 /// still be an error to provide better error messages; consider this example:
 /// 
 /// ```
 /// -o attr : (1-
 /// ```
 /// 
-/// The programmer here may have wanted to specify a cardinality, if the parsing failed
-/// and recovered with a default cardinality of (1-1) then the error would be on
-/// the incomplete '(1-' when the parser tries to parse the following attribute giving a
-/// puzzling error along the lines of "I was expecting an attribute/key/...".
+/// The programmer here may have wanted to specify a cardinality, if the parsing
+/// failed and recovered with a default cardinality of (1-1) then the error
+/// would be on the incomplete `(1-` when the parser tries to parse the
+/// following attribute giving a puzzling error along the lines of "I was
+/// expecting an attribute/key/...".
 /// 
-/// By not recovering we can provide a more insightful error about an _incomplete_
-/// cardinality that is maybe missing a piece.
-/// That is why, as soon as this function finds a '(' it becomes impossible to recover,
-/// even if lenient is set to `True`.
+/// By not recovering we can provide a more insightful error about an
+/// _incomplete_ cardinality that is maybe missing a piece.
+/// That is why, as soon as this function finds a `(` it becomes impossible to
+/// recover, even if lenient is set to `True`.
 /// 
 fn parse_cardinality(
   tokens: List(#(Token, Span)),
