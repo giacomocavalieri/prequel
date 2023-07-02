@@ -23,6 +23,26 @@ pub type Token {
   Word(value: String)
 }
 
+pub fn to_string(token: Token) -> String {
+  case token {
+    OpenBracket -> "{"
+    CloseBracket -> "}"
+    OpenParens -> "("
+    CloseParens -> ")"
+    Colon -> ":"
+    CircleLollipop -> "-o"
+    StarLollipop -> "-*"
+    ArrowLollipop -> "->"
+    Minus -> "-"
+    Ampersand -> "&"
+    ModuleComment(comment) -> "////" <> comment
+    TopLevelComment(comment) -> "///" <> comment
+    SimpleComment(comment) -> "//" <> comment
+    Number(number) -> number
+    Word(word) -> word
+  }
+}
+
 /// Given a source code string scans it in a list of pairs composed of a
 /// token and its span in the source code.
 /// 

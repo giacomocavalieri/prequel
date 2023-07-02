@@ -11,16 +11,8 @@
 
 
 
-[ E003 ] Error: Unexpected end of file (entity)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity
-    ┆ ┬─────
-    ┆ ╰─ I ran into the end of file halfway through parsing this entity
 
-
-
-[ E004 ] Error: More than one hierarchy hierarchy inside an entity
+[ E004 ] Error: More than one hierarchy inside an entity
     ╭─── Hello.prequel:1:1
     │
   1 │ entity prova {
@@ -127,39 +119,6 @@ For example:
 
 
 
-[ E010 ] Error: Top level relationship definition inside other element
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆ 
-  7 │   relationship prova {
-    ┆   ┬───────────
-    ┆   ╰─ Relationships can only be defined with the `relationship` keyword
-    ┆      at the top level of a file
-
-(a) If you want to quickly define a binary relationship between two entites you can
-use the `->` lollipop inside one of the two entities.
-For example:
-
-entity test_entity_1
-entity test_entity_2 {
-    -> rel : (1-1) test_entity_1 (0-N)
-    ┬─────────────────────────────────
-    ╰─ This means that `test_entity_1` and `test_entity_2` take part in a
-       relationship called `rel` with respective cardinalities of (0-N) and
-       (1-1)
-}
-
-The same relationship could also have been defined in a slighly more verbose way
-as:
-
-entity test_entity_1
-entity test_entity_2
-relationship rel {
-  -> test_entity_1 : (0-N)
-  -> test_entity_2 : (1-1)
-}
-
 
 [ E011 ] Error: Unexpected token inside entity's body
     ╭─── Hello.prequel:1:1
@@ -187,91 +146,6 @@ An entity's body can only contain:
     ┆   ┬─ ─
     ┆   ╰─ I was expecting to find an attribute name after this but I ran into
     ┆      `&` which is not a valid name
-
-
-
-[ E014 ] Error: Internal compiler bug (number token does not hold a number)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆ 
-  7 │   -o & : (1-1)
-    ┆          ┬────
-    ┆          ╰─ I got stuck parsing this cardinality
-
-This is definetly a compiler bug! Please report this issue on GitHub at:
-https://foobarbaz.com
-
-
-
-[ E015 ] Error: Wrong letter in unbounded cardinality
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆ 
-  7 │   -o attribute : (1-M)
-    ┆                     ┬
-    ┆                     ╰─ Did you mean to write `N` as the upper limit?
-
-
-
-[ E016 ] Error: Incomplete cardinality annotation (closed paren)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆
-  7 │   -o attribute : (1-M
-    ┆                  ┬───
-    ┆                  ╰─ This looks like a cardinality annotation but it is
-    ┆                     missing a `)`
-                         
-
-
-[ E016 ] Error: Incomplete cardinality annotation (upper bound)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆
-  7 │   -o attribute : (1-
-    ┆                  ┬──
-    ┆                  ╰─ This looks like a cardinality annotation but it is
-    ┆                     missing an upper bound
-
-
-
-[ E016 ] Error: Incomplete cardinality annotation (upper bound)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆
-  7 │   -o attribute : (1
-    ┆                  ┬─
-    ┆                  ╰─ This looks like a cardinality annotation but it is
-    ┆                     missing an upper bound
-
-
-
-[ E016 ] Error: Incomplete cardinality annotation (lower bound)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆
-  7 │   -o attribute : (-M)
-    ┆                  ┬
-    ┆                  ╰─ This looks like a cardinality annotation but it is
-    ┆                     missing a lower bound
-
-
-
-[ E016 ] Error: Incomplete cardinality annotation (open parens)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity prova {
-    ┆
-  7 │   -o attribute : 1-M)
-    ┆                  ┬
-    ┆                  ╰─ This looks like a cardinality annotation but it is
-    ┆                     missing an `(` before the lower bound
 
 
 
@@ -305,7 +179,7 @@ https://foobarbaz.com
   1 │ entity prova {
     ┆
   7 │   -* foo & bar :
-    ┆                ┬
+    ┆      ───────── ┬
     ┆                ╰─ A key composed by multiple items cannot have a type
     ┆                   annotation
 
@@ -322,6 +196,9 @@ https://foobarbaz.com
 
 (a) to define a binary relationship inside an entity you can...
 (b) to define an entity taking part into a relationship you can...
+
+
+TO DO BELOW -----------vvv
 
 [ E023 ] Error: Wrong relationship name
     ╭─── Hello.prequel:1:1
@@ -468,3 +345,99 @@ A hierarchy's body can only contain...
     ┆    ╰─ I didn't expect to run into this token inside a relationship's body
 
 A relationship can only contain...
+
+
+
+[ E015 ] Error: Wrong letter in unbounded cardinality
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   -o attribute : (1-M)
+    ┆                     ┬
+    ┆                     ╰─ Did you mean to write `N` as the upper limit?
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (closed paren)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1-M
+    ┆                  ┬───
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing a `)`
+                         
+
+
+[ E016 ] Error: Incomplete cardinality annotation (upper bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1-
+    ┆                  ┬──
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an upper bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (upper bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1
+    ┆                  ┬─
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an upper bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (lower bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (-M)
+    ┆                  ┬
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing a lower bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (open parens)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : 1-M)
+    ┆                  ┬
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an `(` before the lower bound
+
+
+
+
+
+[ E014 ] Error: Internal compiler bug (number token does not hold a number)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   -o & : (1-1)
+    ┆          ┬────
+    ┆          ╰─ I got stuck parsing this cardinality
+
+This is definetly a compiler bug! Please report this issue on GitHub at:
+https://foobarbaz.com
+
+
+[ E003 ] Error: Unexpected end of file (entity)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity
+    ┆ ┬─────
+    ┆ ╰─ I ran into the end of file halfway through parsing this entity
+
