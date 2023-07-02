@@ -151,8 +151,8 @@ fn do_parse(
       #(list.reverse(entities), list.reverse(relationships))
       |> succeed([])
 
-    [#(Word("entity"), entity_span), ..tokens] -> {
-      use entity, tokens <- try(parse_entity(tokens, entity_span))
+    [#(Word("entity"), entity_keyword_span), ..tokens] -> {
+      use entity, tokens <- try(parse_entity(tokens, entity_keyword_span))
       do_parse(tokens, [entity, ..entities], relationships)
     }
     [#(Word("relationship"), relationship_span), ..tokens] -> {
@@ -162,7 +162,7 @@ fn do_parse(
       ))
       do_parse(tokens, entities, [relationship, ..relationships])
     }
-    [#(token, span), ..] -> todo("nice error")
+    [#(_, _), ..] -> todo("nice error")
   }
 }
 
@@ -194,22 +194,22 @@ fn succeed(result: a, tokens: List(#(Token, Span))) -> ParseResult(a) {
 /// 
 fn parse_entity(
   tokens: List(#(Token, Span)),
-  entity_span: Span,
+  entity_keyword_span: Span,
 ) -> ParseResult(Entity) {
   case tokens {
     // If there is an open bracket '{', parses the body of the entity.
-    [#(Word(name), name_span), #(OpenBracket, _), ..tokens] ->
-      parse_entity_body(tokens, name, name_span, [], [], [], None)
+    [#(Word(entity_name), entity_span), #(OpenBracket, _), ..tokens] ->
+      parse_entity_body(tokens, entity_name, entity_span)
 
     // Parses an entity with an empty body.
-    [#(Word(name), name_span), ..tokens] ->
-      Entity(name_span, name, [], [], [], None)
+    [#(Word(entity_name), entity_span), ..tokens] ->
+      Entity(entity_span, entity_name, [], [], [], None)
       |> succeed(tokens)
 
     [#(token, span), ..] ->
       parse_error.WrongEntityName(
         enclosing_definition: None,
-        before_wrong_name: entity_span,
+        before_wrong_name: entity_keyword_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
         hint: None,
@@ -227,10 +227,19 @@ fn parse_entity(
 /// It returns the completely parsed entity using the `name` and `name_span`
 /// passed as arguments.
 /// 
+/// 
 fn parse_entity_body(
   tokens: List(#(Token, Span)),
-  name: String,
-  name_span: Span,
+  entity_name: String,
+  entity_span: Span,
+) {
+  do_parse_entity_body(tokens, entity_name, entity_span, [], [], [], None)
+}
+
+fn do_parse_entity_body(
+  tokens: List(#(Token, Span)),
+  entity_name: String,
+  entity_span: Span,
   keys: List(Key),
   attributes: List(Attribute),
   inner_relationships: List(Relationship),
@@ -242,8 +251,8 @@ fn parse_entity_body(
     // remaining tokens in the input.
     [#(CloseBracket, _), ..tokens] ->
       Entity(
-        name_span,
-        name,
+        entity_span,
+        entity_name,
         list.reverse(keys),
         list.reverse(attributes),
         list.reverse(inner_relationships),
@@ -252,12 +261,16 @@ fn parse_entity_body(
       |> succeed(tokens)
 
     // If a `-o` is found, switches into attribute parsing.
-    [#(CircleLollipop, span), ..tokens] -> {
-      use attribute, tokens <- try(parse_attribute(tokens, name_span, span))
-      parse_entity_body(
+    [#(CircleLollipop, lollipop_span), ..tokens] -> {
+      use attribute, tokens <- try(parse_attribute(
         tokens,
-        name,
-        name_span,
+        entity_span,
+        lollipop_span,
+      ))
+      do_parse_entity_body(
+        tokens,
+        entity_name,
+        entity_span,
         keys,
         [attribute, ..attributes],
         inner_relationships,
@@ -270,26 +283,25 @@ fn parse_entity_body(
     [#(StarLollipop, lollipop_span), ..tokens] -> {
       use #(key, attribute), tokens <- try(parse_key(
         tokens,
-        [],
-        name_span,
+        entity_span,
         lollipop_span,
       ))
       case attribute {
         None ->
-          parse_entity_body(
+          do_parse_entity_body(
             tokens,
-            name,
-            name_span,
+            entity_name,
+            entity_span,
             [key, ..keys],
             attributes,
             inner_relationships,
             children,
           )
         Some(attribute) ->
-          parse_entity_body(
+          do_parse_entity_body(
             tokens,
-            name,
-            name_span,
+            entity_name,
+            entity_span,
             [key, ..keys],
             [attribute, ..attributes],
             inner_relationships,
@@ -302,14 +314,14 @@ fn parse_entity_body(
     [#(ArrowLollipop, lollipop_span), ..tokens] -> {
       use relationship, tokens <- try(parse_inner_relationship(
         tokens,
-        name,
-        name_span,
+        entity_name,
+        entity_span,
         lollipop_span,
       ))
-      parse_entity_body(
+      do_parse_entity_body(
         tokens,
-        name,
-        name_span,
+        entity_name,
+        entity_span,
         keys,
         attributes,
         [relationship, ..inner_relationships],
@@ -318,24 +330,24 @@ fn parse_entity_body(
     }
 
     // If a `total` or `partial` word is found, switches into hierarchy parsing.
-    [#(Word("total" as word), totality_span), ..tokens]
-    | [#(Word("partial" as word), totality_span), ..tokens] -> {
+    [#(Word("total" as totality_string), totality_span), ..tokens]
+    | [#(Word("partial" as totality_string), totality_span), ..tokens] -> {
       case children {
         Some(_) ->
           todo("E004 move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
         None -> {
           // Todo wrap in an internal error!
-          let assert Ok(totality) = totality_from_string(word)
+          let assert Ok(totality) = totality_from_string(totality_string)
           use children, tokens <- try(parse_hierarchy(
             tokens,
-            name_span,
+            entity_span,
             totality_span,
             totality,
           ))
-          parse_entity_body(
+          do_parse_entity_body(
             tokens,
-            name,
-            name_span,
+            entity_name,
+            entity_span,
             keys,
             attributes,
             inner_relationships,
@@ -349,7 +361,7 @@ fn parse_entity_body(
     // a spelling mistake and suggests a fix.
     [#(Minus, minus_span), #(Word("o"), o_span), ..] ->
       parse_error.PossibleCircleLollipopTypo(
-        enclosing_definition: name_span,
+        enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, o_span),
         hint: None,
       )
@@ -357,7 +369,7 @@ fn parse_entity_body(
 
     [#(Minus, minus_span), #(Word("*"), star_span), ..] ->
       parse_error.PossibleStarLollipopTypo(
-        enclosing_definition: name_span,
+        enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, star_span),
         hint: None,
       )
@@ -365,7 +377,7 @@ fn parse_entity_body(
 
     [#(Minus, minus_span), #(Word(">"), arrow_span), ..] ->
       parse_error.PossibleArrowLollipopTypo(
-        enclosing_definition: name_span,
+        enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, arrow_span),
         hint: None,
       )
@@ -378,7 +390,7 @@ fn parse_entity_body(
       first == "overlapped" || first == "overlapping" || first == "disjoint"
     } && { second == "total" || second == "partial" } ->
       parse_error.WrongOrderOfHierarchyQualifiers(
-        enclosing_entity: name_span,
+        enclosing_entity: entity_span,
         qualifiers_span: span.merge(first_span, second_span),
         first_qualifier: first,
         second_qualifier: second,
@@ -390,15 +402,15 @@ fn parse_entity_body(
     // it should have qualifiers like overlapping etc.
     [#(Word("hierarchy"), span), ..] ->
       parse_error.UnqualifiedHierarchy(
-        enclosing_entity: name_span,
+        enclosing_entity: entity_span,
         hierarchy_span: span,
         hint: None,
       )
       |> fail
 
-    [#(_token, token_span), ..] ->
+    [#(_, token_span), ..] ->
       parse_error.UnexpectedTokenInEntityBody(
-        enclosing_entity: name_span,
+        enclosing_entity: entity_span,
         token_span: token_span,
         hint: None,
       )
@@ -485,7 +497,7 @@ fn parse_cardinality(
   tokens: List(#(Token, Span)),
   lenient: Bool,
   enclosing_span: Span,
-  before_span: Span,
+  preceding_span: Span,
 ) -> ParseResult(Cardinality) {
   case tokens {
     // Parses a bounded cardinality in the form `(<number> - <number>)`.
@@ -557,7 +569,7 @@ fn parse_cardinality(
     [#(token, span), ..] ->
       parse_error.WrongCardinalityAnnotation(
         enclosing_definition: enclosing_span,
-        before_wrong_cardinality: before_span,
+        before_wrong_cardinality: preceding_span,
         wrong_cardinality: token.to_string(token),
         wrong_cardinality_span: span,
         hint: None,
@@ -572,9 +584,17 @@ fn parse_cardinality(
 /// 
 fn parse_key(
   tokens: List(#(Token, Span)),
-  keys: List(String),
   entity_span: Span,
   lollipop_span: Span,
+) -> ParseResult(#(Key, Option(Attribute))) {
+  do_parse_key(tokens, entity_span, lollipop_span, [])
+}
+
+fn do_parse_key(
+  tokens: List(#(Token, Span)),
+  entity_span: Span,
+  lollipop_span: Span,
+  keys: List(String),
 ) -> ParseResult(#(Key, Option(Attribute))) {
   case tokens {
     // If there is a multi-item key with an `&` it switches to multi-key
@@ -727,7 +747,6 @@ fn parse_inner_relationship(
             [#(OpenBracket, _), ..tokens] -> {
               use attributes, tokens <- try(parse_inner_relationship_body(
                 tokens,
-                [],
                 relationship_span,
               ))
               Relationship(
@@ -788,8 +807,15 @@ fn parse_inner_relationship(
 /// 
 fn parse_inner_relationship_body(
   tokens: List(#(Token, Span)),
-  attributes: List(Attribute),
   relationship_span: Span,
+) -> ParseResult(List(Attribute)) {
+  do_parse_inner_relationship_body(tokens, relationship_span, [])
+}
+
+fn do_parse_inner_relationship_body(
+  tokens: List(#(Token, Span)),
+  relationship_span: Span,
+  attributes: List(Attribute),
 ) -> ParseResult(List(Attribute)) {
   case tokens {
     // When a `}` is met, ends the parsing and returns the parsed attributes.
@@ -804,10 +830,10 @@ fn parse_inner_relationship_body(
         relationship_span,
         span,
       ))
-      parse_inner_relationship_body(
+      do_parse_inner_relationship_body(
         tokens,
-        [attribute, ..attributes],
         relationship_span,
+        [attribute, ..attributes],
       )
     }
 
@@ -867,7 +893,7 @@ fn parse_hierarchy(
       ..tokens
     ] -> {
       let assert Ok(overlapping) = overlapping_from_string(word)
-      use entities, tokens <- try(parse_hierarchy_body(tokens, []))
+      use entities, tokens <- try(parse_hierarchy_body(tokens))
       totality_span
       |> span.merge(with: final_span)
       |> Hierarchy(overlapping, totality, entities)
@@ -914,6 +940,12 @@ fn parse_hierarchy(
 /// 
 fn parse_hierarchy_body(
   tokens: List(#(Token, Span)),
+) -> ParseResult(NonEmptyList(Entity)) {
+  do_parse_hierarchy_body(tokens, [])
+}
+
+fn do_parse_hierarchy_body(
+  tokens: List(#(Token, Span)),
   entities: List(Entity),
 ) -> ParseResult(NonEmptyList(Entity)) {
   case tokens {
@@ -932,10 +964,10 @@ fn parse_hierarchy_body(
     // If the `entity` keyword is found, switches to entity parsing.
     [#(Word("entity"), span), ..tokens] -> {
       use entity, tokens <- try(parse_entity(tokens, span))
-      parse_hierarchy_body(tokens, [entity, ..entities])
+      do_parse_hierarchy_body(tokens, [entity, ..entities])
     }
 
-    [#(token, span), ..] -> todo("E031")
+    [#(_, _), ..] -> todo("E031")
     [] -> todo("E003")
   }
 }
@@ -944,22 +976,22 @@ fn parse_hierarchy_body(
 /// 
 fn parse_relationship(
   tokens: List(#(Token, Span)),
-  relationship_span: Span,
+  relationship_keyword_span: Span,
 ) -> ParseResult(Relationship) {
   case tokens {
     // If there is the name and an `{` switches to parsing the relationship's
     // body.
-    [#(Word(name), name_span), #(OpenBracket, _), ..tokens] ->
-      parse_relationship_body(tokens, name, name_span, [], [])
+    [#(Word(relationship_name), relationship_span), #(OpenBracket, _), ..tokens] ->
+      parse_relationship_body(tokens, relationship_name, relationship_span)
 
     // If there is the relationship's name but no `{` reports it as an error
     // since a relationship must always have a body.
-    [#(Word(name), _), ..] -> todo("E032")
+    [#(Word(_), _), ..] -> todo("E032")
 
     [#(token, span), ..] ->
       parse_error.WrongRelationshipName(
         enclosing_definition: None,
-        before_wrong_name: relationship_span,
+        before_wrong_name: relationship_keyword_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
         hint: None,
@@ -971,10 +1003,19 @@ fn parse_relationship(
 
 /// Parses the body of a relationship after finding a `{`.
 /// 
+/// 
 fn parse_relationship_body(
   tokens: List(#(Token, Span)),
-  name: String,
+  relationship_name: String,
   name_span: Span,
+) -> ParseResult(Relationship) {
+  do_parse_relationship_body(tokens, relationship_name, name_span, [], [])
+}
+
+fn do_parse_relationship_body(
+  tokens: List(#(Token, Span)),
+  relationship_name: String,
+  relationship_span: Span,
   entities: List(RelationshipEntity),
   attributes: List(Attribute),
 ) -> ParseResult(Relationship) {
@@ -984,35 +1025,44 @@ fn parse_relationship_body(
     [#(CloseBracket, _), ..tokens] ->
       case entities {
         [one_entity, other_entity, ..other_entities] ->
-          non_empty_list.new(other_entity, other_entities)
-          |> Relationship(name_span, name, one_entity, _, attributes)
+          Relationship(
+            relationship_span,
+            relationship_name,
+            one_entity,
+            non_empty_list.new(other_entity, other_entities),
+            attributes,
+          )
           |> succeed(tokens)
         _ -> todo("E032 o E033 a seconda del numero")
       }
 
     // If a `-o` is found, switch to attribute parsing.
-    [#(CircleLollipop, span), ..tokens] -> {
-      use attribute, tokens <- try(parse_attribute(tokens, name_span, span))
-      parse_relationship_body(
+    [#(CircleLollipop, lollipop_span), ..tokens] -> {
+      use attribute, tokens <- try(parse_attribute(
         tokens,
-        name,
-        name_span,
+        relationship_span,
+        lollipop_span,
+      ))
+      do_parse_relationship_body(
+        tokens,
+        relationship_name,
+        relationship_span,
         entities,
         [attribute, ..attributes],
       )
     }
 
     // If a `->` is found, switch to entity parsing.
-    [#(ArrowLollipop, span), ..tokens] -> {
+    [#(ArrowLollipop, lollipop_span), ..tokens] -> {
       use entity, tokens <- try(parse_relationship_entity(
         tokens,
-        name_span,
-        span,
+        relationship_span,
+        lollipop_span,
       ))
-      parse_relationship_body(
+      do_parse_relationship_body(
         tokens,
-        name,
-        name_span,
+        relationship_name,
+        relationship_span,
         [entity, ..entities],
         attributes,
       )
@@ -1022,7 +1072,7 @@ fn parse_relationship_body(
     // a key.
     [#(StarLollipop, lollipop_span), ..] ->
       parse_error.KeyInsideRelationship(
-        enclosing_relationship: name_span,
+        enclosing_relationship: relationship_span,
         lollipop_span: lollipop_span,
         hint: None,
       )
@@ -1032,7 +1082,7 @@ fn parse_relationship_body(
     // a spelling mistake and suggests a fix.
     [#(Minus, minus_span), #(Word("o"), o_span), ..] ->
       parse_error.PossibleCircleLollipopTypo(
-        enclosing_definition: name_span,
+        enclosing_definition: relationship_span,
         typo_span: span.merge(minus_span, o_span),
         hint: None,
       )
@@ -1040,13 +1090,13 @@ fn parse_relationship_body(
 
     [#(Minus, minus_span), #(Word(">"), arrow_span), ..] ->
       parse_error.PossibleArrowLollipopTypo(
-        enclosing_definition: name_span,
+        enclosing_definition: relationship_span,
         typo_span: span.merge(minus_span, arrow_span),
         hint: None,
       )
       |> fail
 
-    [#(token, _), ..] -> todo("E034")
+    [#(_, _), ..] -> todo("E034")
     [] -> todo("E003")
   }
 }
