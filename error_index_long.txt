@@ -1,0 +1,470 @@
+[ E001 ] Error: Wrong entity name
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity -o {
+    ┆ ┬───── ──
+    ┆ ╰─ I was expecting to find an entity name after this but I ran into `-o`
+    ┆    which is not a valid name
+
+(a) To define an entity you can ...
+(b) To define a shorthand relationship you can ...
+
+
+
+[ E003 ] Error: Unexpected end of file (entity)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity
+    ┆ ┬─────
+    ┆ ╰─ I ran into the end of file halfway through parsing this entity
+
+
+
+[ E004 ] Error: More than one hierarchy hierarchy inside an entity
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  5 │   total disjoint hierarchy {
+    ┆   ┬───────────────────────
+    ┆   ╰─ Each entity can only be the root of one hierarchy but I found more
+    ┆      than one: here is the first one
+    ┆
+ 14 │   total disjoint hierarchy {
+    ┆   ┬───────────────────────
+    ┆   ╰─ And here is another one. Maybe you could merge them?
+
+Each entity can only be the root of one hierarchy.
+
+
+
+[ E005 ] Error: Possible attribute lollipop typo
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   - o prova
+    ┆   ┬──
+    ┆   ╰─ Did you mean to write `-o` here?
+
+To define an attribute you can use the `-o` lollipop followed by the attribute's
+name.
+
+
+
+[ E006 ] Error: Possible key lollipop typo
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   - * prova
+    ┆   ┬──
+    ┆   ╰─ Did you mean to write `-*` here?
+
+To define a key you can use the `-*` lollipop followed by a name or a
+list of names separated by `&`.
+
+
+
+[ E007 ] Error: Possible relationship shorthand lollipop typo
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   - > prova
+    ┆   ┬──
+    ┆   ╰─ Did you mean to write `->` here?
+
+To define a relationship inside an entity key you can use the `->` lollipop
+followed by the relationship's name.
+
+
+
+[ E008 ] Error: Wrong order of hierarchy qualifiers
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   overlapped total hierarchy
+    ┆   ┬───────────────
+    ┆   ╰─ Did you mean to write `total overlapped` here?
+
+To define a hierarchy inside an entity you first have to specify if it is
+`total` or `partial` and then if it is `disjoint` or `overlapped`.
+For example:
+
+  entity test_entity {
+    total disjoint hierarchy {
+    ┬─────────────
+    ╰─ This is the correct order of qualifiers to define a hierarchy
+      entity sub_entity
+    }
+  }
+
+
+
+[ E009 ] Error: Unqualified hierarchy
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   hierarchy {
+    ┆   ┬────────
+    ┆   ╰─ This hierarchy is missing its totality and overlapping qualifiers.
+    ┆      Add `total`/`partial` and `overlapped`/`disjoint` before `hierarchy`
+
+To define a hierarchy inside an entity you first have to specify if it is
+`total` or `partial` and then if it is `disjoint` or `overlapped`.
+For example:
+
+  entity test_entity {
+    total disjoint hierarchy {
+    ┬───────────────────────
+    ╰─ This is a valid hierarchy definition
+      entity sub_entity
+    }
+  }
+
+
+
+[ E010 ] Error: Top level relationship definition inside other element
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   relationship prova {
+    ┆   ┬───────────
+    ┆   ╰─ Relationships can only be defined with the `relationship` keyword
+    ┆      at the top level of a file
+
+(a) If you want to quickly define a binary relationship between two entites you can
+use the `->` lollipop inside one of the two entities.
+For example:
+
+entity test_entity_1
+entity test_entity_2 {
+    -> rel : (1-1) test_entity_1 (0-N)
+    ┬─────────────────────────────────
+    ╰─ This means that `test_entity_1` and `test_entity_2` take part in a
+       relationship called `rel` with respective cardinalities of (0-N) and
+       (1-1)
+}
+
+The same relationship could also have been defined in a slighly more verbose way
+as:
+
+entity test_entity_1
+entity test_entity_2
+relationship rel {
+  -> test_entity_1 : (0-N)
+  -> test_entity_2 : (1-1)
+}
+
+
+[ E011 ] Error: Unexpected token inside entity's body
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   & asd
+    ┆   ┬
+    ┆   ╰─ I didn't expect to find this token inside an entity's body
+
+An entity's body can only contain:
+- zero or more attributes defined with the `-o` lollipop
+- zero or more keys defined with the `-*` lollipop
+- zero or more binary relationships defined with the `->` lollipop
+- at most one hierarchy
+
+
+
+[ E013 ] Error: Wrong attribute name
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   -o & : (1-1)
+    ┆   ┬─ ─
+    ┆   ╰─ I was expecting to find an attribute name after this but I ran into
+    ┆      `&` which is not a valid name
+
+
+
+[ E014 ] Error: Internal compiler bug (number token does not hold a number)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   -o & : (1-1)
+    ┆          ┬────
+    ┆          ╰─ I got stuck parsing this cardinality
+
+This is definetly a compiler bug! Please report this issue on GitHub at:
+https://foobarbaz.com
+
+
+
+[ E015 ] Error: Wrong letter in unbounded cardinality
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆ 
+  7 │   -o attribute : (1-M)
+    ┆                     ┬
+    ┆                     ╰─ Did you mean to write `N` as the upper limit?
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (closed paren)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1-M
+    ┆                  ┬───
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing a `)`
+                         
+
+
+[ E016 ] Error: Incomplete cardinality annotation (upper bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1-
+    ┆                  ┬──
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an upper bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (upper bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (1
+    ┆                  ┬─
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an upper bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (lower bound)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : (-M)
+    ┆                  ┬
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing a lower bound
+
+
+
+[ E016 ] Error: Incomplete cardinality annotation (open parens)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : 1-M)
+    ┆                  ┬
+    ┆                  ╰─ This looks like a cardinality annotation but it is
+    ┆                     missing an `(` before the lower bound
+
+
+
+[ E017 ] Error: Wrong cardinality annotation
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -o attribute : foobar
+    ┆                ┬ ──────
+    ┆                ╰─ I was expecting a cardinality annotation after this but
+    ┆                   I ran into `foobar` which is not a valid cardinality
+
+
+
+[ E018 ] Error: Wrong key definition
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -* 123
+    ┆   ┬─ ───
+    ┆   ╰─ I was expecting to find a key name after this but I ran into `123`
+    ┆      which is not a valid name
+
+
+
+[ E019 ] Error: Type annotation on multi-item key
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -* foo & bar :
+    ┆                ┬
+    ┆                ╰─ A key composed by multiple items cannot have a type
+    ┆                   annotation
+
+
+
+[ E022 ] Error: Missing cardinality annotation
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -> hello
+    ┆      ┬────
+    ┆      ╰─ I was expecting to find a cardinality annotation after this
+
+(a) to define a binary relationship inside an entity you can...
+(b) to define an entity taking part into a relationship you can...
+
+[ E023 ] Error: Wrong relationship name
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity prova {
+    ┆
+  7 │   -> -o
+    ┆   ┬─ ──
+    ┆   ╰─ I was expecting to find a relationship name after this but I ran into
+    ┆      `-o` which is not a valid name
+    ┆
+
+(a) to define a binary relationship inside an entity you can...
+(b) to define a relationship you can...
+
+
+[ E024 ] Error: No keys inside relationships
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ relationship prova {
+    ┆
+  7 │   -* foobar
+    ┆   ┬─ 
+    ┆   ╰─ A relationship cannot contain any keys, did you mean to write `-o`
+    ┆      instead?
+
+in case it regards a binary rel inside an entity it should look like this:
+[ E024 ] Error: No keys inside relationships
+    ╭─── Hello.prequel:1:1
+    │
+  1 │   -> rel : (1-1) baz (0-N) {
+    ┆
+  7 │     -* foobar
+    ┆     ┬─ 
+    ┆     ╰─ A relationship cannot contain any keys, did you mean to write `-o`
+    ┆        instead?
+
+
+
+[ E025 ] Error: No entities allowed inside shorthand binary relationships
+    ╭─── Hello.prequel:1:1
+    │
+  1 │   -> rel : (1-1) baz (0-N) {
+    ┆
+  7 │     -> foobar
+    ┆     ┬─ 
+    ┆     ╰─ A binary relationship defined inside an entity cannot contain
+    ┆        other `->` lollipops. To turn it into an N-ary relationship you
+    ┆        have to define `rel` as a standalone relationship
+
+
+
+[ E026 ] Error: Unexpected token inside binary relationship shorthand
+    ╭─── Hello.prequel:1:1
+    │
+  4 │   -> rel : (1-1) faz (0-N) {
+    ┆ 
+ 18 │     & asd
+    ┆     ┬
+    ┆     ╰─ I didn't expect to find this token inside a binary relationship's
+    ┆        body
+
+A binary relationship's body can only contain:
+- zero or more attributes defined with the `-o` lollipop
+
+
+
+[ E027 ] Error: Wrong overlapping
+    ╭─── Hello.prequel:1:1
+    │
+  4 │   entity test {
+    ┆ 
+ 18 │     total overlapping hierarchy
+    ┆     ┬──── ───────────
+    ┆     ╰─ I was expecting to find an overlapping mode (one of `overlapped`
+    ┆        or `disjoint`) after this but I ran into `overlapping` which is not
+    ┆        a valid mode        
+
+
+
+[ E028 ] Error: Missing hierarchy keyword
+    ╭─── Hello.prequel:1:1
+    │
+  4 │   entity test {
+    ┆ 
+ 18 │     total overlapping -o
+    ┆           ┬────────── ──
+    ┆           ╰─ I was expecting to find the `hierarchy` keyword after this
+    ┆              but instead I ran into `-o`
+
+
+
+[ E029 ] Error: Empty hierarchy's body
+    ╭─── Hello.prequel:1:1
+    │
+  4 │     total overlapping hierarchy {
+    │       relationship foo {
+    ┆       ┬───────────
+    ┆       ╰─ This hierarchy has an empty body but I was expecting it to have
+    ┆          at least one sub entity
+
+
+
+[ E031 ] Error: Unexpected token inside hierarchy's body
+    ╭─── Hello.prequel:1:1
+    │
+  4 │     total overlapping hierarchy {
+    │       &
+    ┆       ┬
+    ┆       ╰─ I didn't expect to find this token inside a hierarchy's body
+
+A hierarchy's body can only contain...
+
+
+
+[ E032 ] Error: Empty relationship's body
+    ╭─── Hello.prequel:1:1
+    │
+  4 │  relationship foo
+    ┆  ┬───────────────
+    ┆  ╰─ This relationship has an empty body but I was expecting it to have at
+    ┆     least two entities taking part into it
+
+
+
+[ E033 ] Error: Relationship with only one entity
+    ╭─── Hello.prequel:1:1
+    │
+  4 │  relationship foo {
+    ┆    -> faz
+    ┆       ┬──
+    ┆       ╰─ This is the only entity taking part into the relationship `foo`
+    ┆          but every relationship should have at least two entities taking
+    ┆          part into it
+
+
+
+[ E034 ] Error: Unexpected token inside relationship's body
+    ╭─── Hello.prequel:1:1
+    │
+  4 │  relationship foo {
+    ┆    & asd
+    ┆    ┬
+    ┆    ╰─ I didn't expect to run into this token inside a relationship's body
+
+A relationship can only contain...

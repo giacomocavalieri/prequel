@@ -191,8 +191,7 @@ fn parse_entity(tokens: List(#(Token, Span))) -> ParseResult(Entity) {
       |> Ok
       |> pair.new(tokens)
 
-    [#(OpenBracket, _), ..] -> todo("E001")
-    [#(token, span), ..] -> todo("E002")
+    [#(token, span), ..] -> todo("E001 (a)")
     [] -> todo("E003-entity")
   }
 }
@@ -331,7 +330,7 @@ fn parse_entity_body(
     [#(Word("relationship"), span), ..] -> todo("E010")
 
     [#(token, _), ..] -> todo("E011")
-    [] -> todo("E003")
+    [] -> todo("E003 (while parsing the body of this entity)")
   }
 }
 
@@ -356,8 +355,9 @@ fn parse_attribute(tokens: List(#(Token, Span))) -> ParseResult(Attribute) {
       |> Ok
       |> pair.new(tokens)
 
-    [#(token, span), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    [#(token, span), ..] -> todo("E013")
+
+    [] -> todo("E003 (attribute)")
   }
 }
 
@@ -404,7 +404,9 @@ fn parse_cardinality(
       ..tokens
     ] -> {
       //use lower <- result.try(int.parse(raw_lower))
+      // todo("E014")
       //use upper <- result.map(int.parse(raw_upper))
+      // todo("E014")
       //#(Bounded(lower, upper), tokens)
       todo
     }
@@ -419,6 +421,7 @@ fn parse_cardinality(
       ..tokens
     ] -> {
       //use lower <- result.map(int.parse(raw_lower))
+      // todo("E014")
       //#(Unbounded(lower), tokens)
       todo
     }
@@ -432,33 +435,31 @@ fn parse_cardinality(
       #(Word(_), _),
       #(CloseParens, _),
       ..
-    ] -> todo("wrong letter in unbounded cardinality")
+    ] -> todo("E015")
 
     // If the cardinality is correct but is missing the closing parentheses. 
     [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Number(_), _), ..]
     | [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Word(_), _), ..] ->
-      todo("there should be a closed parens here")
+      todo("E016")
 
     // If the cardinality is (mostly) correct but is missing the second number.
-    [#(OpenParens, _), #(Number(_), _), #(Minus, _), ..] ->
-      todo("there should be a number or an N here")
+    [#(OpenParens, _), #(Number(_), _), #(Minus, _), ..] -> todo("E016")
 
     // If the cardinality is (mostly) correct but is missing the `-`.
-    [#(OpenParens, _), #(Number(_), _), ..] ->
-      todo("there should be a minus here")
+    [#(OpenParens, _), #(Number(_), _), ..] -> todo("E016")
 
     // If there is an `(` but nothing else making it a cardinality.
-    [#(OpenParens, _), ..] -> todo("there should be a number here")
+    [#(OpenParens, _), ..] -> todo("E016")
 
     // If there is a number it suggests that they probably forgot the `(`.
-    [#(Number(n), _), ..] -> todo("probably missing open parens before number")
+    [#(Number(n), _), ..] -> todo("E016")
 
     // If it is lenient and did not incur in any obvious mistake it defaults
     // to the `(1-1)` cardinality.
     [_, ..] if lenient -> #(Ok(Bounded(1, 1)), tokens)
 
-    [#(token, span), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    [#(token, span), ..] -> todo("E017")
+    [] -> todo("E003")
   }
 }
 
@@ -485,14 +486,9 @@ fn parse_key(
     // TODO SISTEMARE
     [#(Word(key), span), #(Colon, _), ..tokens] -> {
       use type_, tokens <- try(parse_attribute_type(tokens))
-      case type_ {
-        NoType -> todo("fail there should be a type annotation there")
-        _ -> {
-          let attribute = Attribute(span, key, Bounded(1, 1), type_)
-          let key = Key(span, non_empty_list.single(key))
-          #(Ok(#(key, Some(attribute))), tokens)
-        }
-      }
+      let attribute = Attribute(span, key, Bounded(1, 1), type_)
+      let key = Key(span, non_empty_list.single(key))
+      #(Ok(#(key, Some(attribute))), tokens)
     }
 
     // If there is only a word it switches to parsing a key shorthand for an
@@ -504,8 +500,8 @@ fn parse_key(
       |> Ok
       |> pair.new(tokens)
 
-    [#(token, span), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    [#(token, span), ..] -> todo("E018")
+    [] -> todo("E003 (parsing key)")
   }
 }
 
@@ -523,8 +519,7 @@ fn parse_multi_attribute_key(
 
     // If there is a `:` it reports an error since a multi-key cannot
     // have a type annotation.
-    [#(Word(_), _), #(Colon, _), ..] ->
-      todo("error no type annotation in multi element key")
+    [#(Word(_), _), #(Colon, _), ..] -> todo("E019")
 
     // If there is a word not followed by `&` it is done parsing the key.
     [#(Word(key), final_span), ..tokens] ->
@@ -534,8 +529,9 @@ fn parse_multi_attribute_key(
       |> Ok
       |> pair.new(tokens)
 
-    [#(token, _), ..] -> todo("I was expecting a word here")
-    [] -> todo("unexpected EOF")
+    [#(token, _), ..] -> todo("E018")
+
+    [] -> todo("E003 (parsing key)")
   }
 }
 
@@ -555,6 +551,7 @@ fn parse_inner_relationship(
     [#(Word(relationship_name), relationship_span), #(Colon, _), ..tokens] -> {
       // ...then there should be a cardinality...
       use one_cardinality, tokens <- try(parse_cardinality(tokens, False))
+      // TODO HERE I COULD CHANGE THE HINT TO SOMETHING ELSE BUT KEEP THE SAME ERROR
 
       case tokens {
         // ...followed by another name, that is the name of the second entity
@@ -562,6 +559,7 @@ fn parse_inner_relationship(
         [#(Word(other_name), other_name_span), ..tokens] -> {
           // Then there should be its cardinality in the relationship.
           use other_cardinality, tokens <- try(parse_cardinality(tokens, False))
+          // TODO HERE I COULD CHANGE THE HINT TO SOMETHING ELSE BUT KEEP THE SAME ERROR
 
           let one_entity =
             RelationshipEntity(entity_span, entity_name, one_cardinality)
@@ -594,18 +592,17 @@ fn parse_inner_relationship(
               |> pair.new(tokens)
           }
         }
-
-        _ -> todo("expecting word")
+        [#(token, _), ..] -> todo("E001 (b)")
+        [] -> todo("E003 while parsing binary relationship")
       }
     }
 
     // If there is no `:` it is reported as an error since a cardinality is
     // always needed.
-    [#(Word(name), _), ..] ->
-      todo("inner relationship missing cardinality annotation")
+    [#(Word(name), _), ..] -> todo("E022 (a)")
 
-    [#(token, _), ..] -> todo("I was expecting a word here")
-    [] -> todo("unexpected EOF")
+    [#(token, _), ..] -> todo("E023")
+    [] -> todo("E003")
   }
 }
 
@@ -627,18 +624,18 @@ fn parse_inner_relationship_body(
 
     // When a `-*` is found reports an error since a relationship cannot
     // have a key inside.
-    [#(StarLollipop, _), ..] -> todo("a relationship cannot have a key inside")
+    [#(StarLollipop, _), ..] -> todo("E024")
 
     // When a `->` is found reports an error since a relationship cannot
     // have another relationship inside.
-    [#(ArrowLollipop, _), ..] -> todo("a short rel cannot have other rels")
+    [#(ArrowLollipop, _), ..] -> todo("E025")
 
     // If someone writes `- o` it tells them there's possibly
     // a spelling mistake and suggests a fix.
-    [#(Minus, _), #(Word("o"), _), ..] -> todo("possible typo")
+    [#(Minus, _), #(Word("o"), _), ..] -> todo("E005")
 
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    [#(token, _), ..] -> todo("E026")
+    [] -> todo("E003")
   }
 }
 
@@ -650,15 +647,6 @@ fn parse_hierarchy(
   totality: Totality,
 ) -> ParseResult(Hierarchy) {
   case tokens {
-    // If someone writes `overlapping` instead of `overlapped`, tells them
-    // this is a mistake and suggests the correct spelling.
-    [#(Word("overlapping"), _), ..tokens] -> todo("error about wrong spelling")
-
-    // If someone writes `hierarchy` without specifying the overlapping of
-    // the hierarchy, tells them this is a mistake and suggests a correction.
-    [#(Word("hierarchy"), _), ..tokens] ->
-      todo("error about missing overlapping")
-
     // If the correct overlapping and the `hierarchy` keyword are found,
     // switches to parsing the hierarchy's body.
     [
@@ -682,20 +670,18 @@ fn parse_hierarchy(
       |> pair.new(tokens)
     }
 
-    // If there is the correct overlapping but no `hierarchy` keyword,
-    // reports the missing keyword and suggests a fix.
-    [#(Word("overlapped"), _), #(OpenBracket, _), ..]
-    | [#(Word("disjoint"), _), #(OpenBracket, _), ..] ->
-      todo("missing hierarchy keyword error")
-
     // If there is no `{`, reports the error since a hierarchy cannot
     // have an empty body.
     [#(Word("overlapped"), _), #(Word("hierarchy"), _), ..]
-    | [#(Word("disjoint"), _), #(Word("hierarchy"), _), ..] ->
-      todo("missing hierarchy body with {}")
+    | [#(Word("disjoint"), _), #(Word("hierarchy"), _), ..] -> todo("E029")
 
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    // If there is the correct overlapping but no `hierarchy` keyword,
+    // reports the missing keyword and suggests a fix.
+    [#(Word("overlapped"), _), ..] | [#(Word("disjoint"), _), ..] ->
+      todo("E028")
+
+    [#(token, _), ..] -> todo("E027")
+    [] -> todo("E003")
   }
 }
 
@@ -725,9 +711,10 @@ fn parse_hierarchy_body(
 
     // If the `relationship` keyword is found, reports it as an error since
     // a hierarchy cannot have a relationship defined inside it.
-    [#(Word("relationship"), _), ..] -> todo("error no rels inside hierarchy")
-    [#(token, span), ..] -> todo("unexpected token")
-    [] -> todo("unepected EOF")
+    [#(Word("relationship"), _), ..] -> todo("E010")
+
+    [#(token, span), ..] -> todo("E031")
+    [] -> todo("E003")
   }
 }
 
@@ -742,13 +729,10 @@ fn parse_relationship(tokens: List(#(Token, Span))) -> ParseResult(Relationship)
 
     // If there is the relationship's name but no `{` reports it as an error
     // since a relationship must always have a body.
-    [#(Word(name), _), ..] -> todo("missing rel body")
+    [#(Word(name), _), ..] -> todo("E032")
 
-    // If there is no name before the `{`, reports the missing name as an error.
-    [#(OpenBracket, _), ..rest] -> todo("missing name error")
-
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected EOF")
+    [#(token, _), ..] -> todo("E023 (b)")
+    [] -> todo("E003")
   }
 }
 
@@ -771,7 +755,7 @@ fn parse_relationship_body(
           |> Relationship(name_span, name, one_entity, _, attributes)
           |> Ok
           |> pair.new(tokens)
-        _ -> todo("not enough entities in the relationship")
+        _ -> todo("E032 o E033 a seconda del numero")
       }
 
     // If a `-o` is found, switch to attribute parsing.
@@ -800,15 +784,15 @@ fn parse_relationship_body(
 
     // If a `-*` is found, reports the error since a relationship cannot have
     // a key.
-    [#(StarLollipop, _), ..] -> todo("a relationship cannot have a key")
+    [#(StarLollipop, _), ..] -> todo("E024")
 
     // If someone writes `- o` or `- >` it tells them there's possibly
     // a spelling mistake and suggests a fix.
-    [#(Minus, _), #(Word("o"), _), ..] -> todo("typo error")
-    [#(Minus, _), #(Word(">"), _), ..] -> todo("typo error")
+    [#(Minus, _), #(Word("o"), _), ..] -> todo("E005")
+    [#(Minus, _), #(Word(">"), _), ..] -> todo("E007")
 
-    [#(token, _), ..] -> todo("unexpected token")
-    [] -> todo("unexpected eof")
+    [#(token, _), ..] -> todo("E034")
+    [] -> todo("E003")
   }
 }
 
@@ -826,9 +810,9 @@ fn parse_relationship_entity(
     }
 
     // In case there is no cardinality annotation, reports it as an error
-    [#(Word(name), name_span), ..tokens] -> todo("")
+    [#(Word(name), name_span), ..tokens] -> todo("E022 (b)")
 
-    [#(token, span), ..tokens] -> todo("")
+    [#(token, span), ..tokens] -> todo("E001")
 
     [] -> todo("")
   }
