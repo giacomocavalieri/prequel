@@ -318,15 +318,20 @@ fn parse_entity_body(
     }
 
     // If a `total` or `partial` word is found, switches into hierarchy parsing.
-    [#(Word("total" as word), span), ..tokens]
-    | [#(Word("partial" as word), span), ..tokens] -> {
+    [#(Word("total" as word), totality_span), ..tokens]
+    | [#(Word("partial" as word), totality_span), ..tokens] -> {
       case children {
         Some(_) ->
           todo("E004 move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
         None -> {
           // Todo wrap in an internal error!
           let assert Ok(totality) = totality_from_string(word)
-          use children, tokens <- try(parse_hierarchy(tokens, span, totality))
+          use children, tokens <- try(parse_hierarchy(
+            tokens,
+            name_span,
+            totality_span,
+            totality,
+          ))
           parse_entity_body(
             tokens,
             name,
@@ -808,11 +813,13 @@ fn parse_inner_relationship_body(
 
     // When a `-*` is found reports an error since a relationship cannot
     // have a key inside.
-    [#(StarLollipop, _), ..] -> todo("E024")
-
-    // When a `->` is found reports an error since a relationship cannot
-    // have another relationship inside.
-    [#(ArrowLollipop, _), ..] -> todo("E025")
+    [#(StarLollipop, lollipop_span), ..] ->
+      parse_error.KeyInsideRelationship(
+        enclosing_relationship: relationship_span,
+        lollipop_span: lollipop_span,
+        hint: None,
+      )
+      |> fail
 
     // If someone writes `- o` it tells them there's possibly
     // a spelling mistake and suggests a fix.
@@ -824,7 +831,14 @@ fn parse_inner_relationship_body(
       )
       |> fail
 
-    [#(token, _), ..] -> todo("E026")
+    [#(_, token_span), ..] ->
+      parse_error.UnexpectedTokenInBinaryRelationship(
+        enclosing_relationship: relationship_span,
+        token_span: token_span,
+        hint: None,
+      )
+      |> fail
+
     [] -> todo("E003")
   }
 }
@@ -833,7 +847,8 @@ fn parse_inner_relationship_body(
 /// 
 fn parse_hierarchy(
   tokens: List(#(Token, Span)),
-  initial_span: Span,
+  entity_span: Span,
+  totality_span: Span,
   totality: Totality,
 ) -> ParseResult(Hierarchy) {
   case tokens {
@@ -853,7 +868,7 @@ fn parse_hierarchy(
     ] -> {
       let assert Ok(overlapping) = overlapping_from_string(word)
       use entities, tokens <- try(parse_hierarchy_body(tokens, []))
-      initial_span
+      totality_span
       |> span.merge(with: final_span)
       |> Hierarchy(overlapping, totality, entities)
       |> succeed(tokens)
@@ -861,15 +876,36 @@ fn parse_hierarchy(
 
     // If there is no `{`, reports the error since a hierarchy cannot
     // have an empty body.
-    [#(Word("overlapped"), _), #(Word("hierarchy"), _), ..]
-    | [#(Word("disjoint"), _), #(Word("hierarchy"), _), ..] -> todo("E029")
+    [#(Word("overlapped"), _), #(Word("hierarchy"), hierarchy_span), ..]
+    | [#(Word("disjoint"), _), #(Word("hierarchy"), hierarchy_span), ..] ->
+      parse_error.EmptyHierarchy(
+        enclosing_entity: entity_span,
+        hierarchy_span: span.merge(totality_span, hierarchy_span),
+        hint: None,
+      )
+      |> fail
 
     // If there is the correct overlapping but no `hierarchy` keyword,
     // reports the missing keyword and suggests a fix.
-    [#(Word("overlapped"), _), ..] | [#(Word("disjoint"), _), ..] ->
-      todo("E028")
+    [#(Word("overlapped"), overlapping_span), ..]
+    | [#(Word("disjoint"), overlapping_span), ..] ->
+      parse_error.MissingHierarchyKeyword(
+        enclosing_entity: entity_span,
+        overlapping_span: overlapping_span,
+        hint: None,
+      )
+      |> fail
 
-    [#(token, _), ..] -> todo("E027")
+    [#(token, span), ..] ->
+      parse_error.WrongHierarchyOverlapping(
+        enclosing_entity: entity_span,
+        before_wrong_overlapping: totality_span,
+        wrong_overlapping: token.to_string(token),
+        wrong_overlapping_span: span,
+        hint: None,
+      )
+      |> fail
+
     [] -> todo("E003")
   }
 }
@@ -984,7 +1020,13 @@ fn parse_relationship_body(
 
     // If a `-*` is found, reports the error since a relationship cannot have
     // a key.
-    [#(StarLollipop, _), ..] -> todo("E024")
+    [#(StarLollipop, lollipop_span), ..] ->
+      parse_error.KeyInsideRelationship(
+        enclosing_relationship: name_span,
+        lollipop_span: lollipop_span,
+        hint: None,
+      )
+      |> fail
 
     // If someone writes `- o` or `- >` it tells them there's possibly
     // a spelling mistake and suggests a fix.

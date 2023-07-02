@@ -99,9 +99,41 @@ pub type ParseError {
     wrong_name_span: Span,
     hint: Option(String),
   )
+
+  KeyInsideRelationship(
+    enclosing_relationship: Span,
+    lollipop_span: Span,
+    hint: Option(String),
+  )
+
+  UnexpectedTokenInBinaryRelationship(
+    enclosing_relationship: Span,
+    token_span: Span,
+    hint: Option(String),
+  )
+
+  WrongHierarchyOverlapping(
+    enclosing_entity: Span,
+    before_wrong_overlapping: Span,
+    wrong_overlapping: String,
+    wrong_overlapping_span: Span,
+    hint: Option(String),
+  )
+
+  MissingHierarchyKeyword(
+    enclosing_entity: Span,
+    overlapping_span: Span,
+    hint: Option(String),
+  )
+
+  EmptyHierarchy(
+    enclosing_entity: Span,
+    hierarchy_span: Span,
+    hint: Option(String),
+  )
 }
 
-fn to_code(error: ParseError) -> Int {
+pub fn to_code(error: ParseError) -> Int {
   case error {
     WrongEntityName(_, _, _, _, _) -> 1
     MoreThanOneHierarchy(_, _, _, _) -> 4
@@ -117,5 +149,10 @@ fn to_code(error: ParseError) -> Int {
     TypeAnnotationOnMultiItemKey(_, _, _, _) -> 19
     MissingCardinalityAnnotation(_, _, _) -> 22
     WrongRelationshipName(_, _, _, _, _) -> 23
+    KeyInsideRelationship(_, _, _) -> 24
+    UnexpectedTokenInBinaryRelationship(_, _, _) -> 26
+    WrongHierarchyOverlapping(_, _, _, _, _) -> 27
+    MissingHierarchyKeyword(_, _, _) -> 28
+    EmptyHierarchy(_, _, _) -> 29
   }
 }
