@@ -183,35 +183,35 @@ pub type ParseError {
   )
 }
 
-pub fn to_code(error: ParseError) -> Int {
+pub fn to_code(error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, _, _, _) -> 1
-    MoreThanOneHierarchy(_, _, _, _) -> 4
-    PossibleCircleLollipopTypo(_, _, _) -> 5
-    PossibleStarLollipopTypo(_, _, _) -> 6
-    PossibleArrowLollipopTypo(_, _, _) -> 7
-    WrongOrderOfHierarchyQualifiers(_, _, _, _, _) -> 8
-    UnqualifiedHierarchy(_, _, _) -> 9
-    UnexpectedTokenInEntityBody(_, _, _) -> 11
-    WrongAttributeName(_, _, _, _, _) -> 13
-    WrongCardinalityAnnotation(_, _, _, _, _) -> 17
-    WrongKeyName(_, _, _, _, _) -> 18
-    TypeAnnotationOnMultiItemKey(_, _, _, _) -> 19
-    MissingCardinalityAnnotation(_, _, _) -> 22
-    WrongRelationshipName(_, _, _, _, _) -> 23
-    KeyInsideRelationship(_, _, _) -> 24
-    UnexpectedTokenInBinaryRelationship(_, _, _) -> 26
-    WrongHierarchyOverlapping(_, _, _, _, _) -> 27
-    MissingHierarchyKeyword(_, _, _) -> 28
-    EmptyHierarchy(_, _, _) -> 29
-    UnexpectedTokenInHierarchyBody(_, _, _) -> 31
-    EmptyRelationshipBody(_, _) -> 32
-    RelationshipBodyWithJustOneEntity(_, _, _, _) -> 33
-    UnexpectedTokenInRelationshipBody(_, _, _) -> 34
-    WrongLetterInUnboundedCardinality(_, _, _) -> 15
-    IncompleteCardinality(_, _, _, _) -> 16
-    UnexpectedEndOfFile(_, _, _, _) -> 3
-    UnexpectedTokenInTopLevel(_, _) -> 99
-    InternalError(_, _, _, _) -> 100
+    WrongEntityName(_, _, _, _, _) -> "001"
+    MoreThanOneHierarchy(_, _, _, _) -> "002"
+    PossibleCircleLollipopTypo(_, _, _) -> "003"
+    PossibleStarLollipopTypo(_, _, _) -> "004"
+    PossibleArrowLollipopTypo(_, _, _) -> "005"
+    WrongOrderOfHierarchyQualifiers(_, _, _, _, _) -> "006"
+    UnqualifiedHierarchy(_, _, _) -> "007"
+    UnexpectedTokenInEntityBody(_, _, _) -> "008"
+    WrongAttributeName(_, _, _, _, _) -> "009"
+    WrongCardinalityAnnotation(_, _, _, _, _) -> "010"
+    WrongKeyName(_, _, _, _, _) -> "011"
+    TypeAnnotationOnMultiItemKey(_, _, _, _) -> "012"
+    MissingCardinalityAnnotation(_, _, _) -> "013"
+    WrongRelationshipName(_, _, _, _, _) -> "014"
+    KeyInsideRelationship(_, _, _) -> "015"
+    UnexpectedTokenInBinaryRelationship(_, _, _) -> "016"
+    WrongHierarchyOverlapping(_, _, _, _, _) -> "017"
+    MissingHierarchyKeyword(_, _, _) -> "018"
+    EmptyHierarchy(_, _, _) -> "019"
+    UnexpectedTokenInHierarchyBody(_, _, _) -> "020"
+    EmptyRelationshipBody(_, _) -> "021"
+    RelationshipBodyWithJustOneEntity(_, _, _, _) -> "022"
+    UnexpectedTokenInRelationshipBody(_, _, _) -> "023"
+    WrongLetterInUnboundedCardinality(_, _, _) -> "024"
+    IncompleteCardinality(_, _, _, _) -> "025"
+    UnexpectedEndOfFile(_, _, _, _) -> "026"
+    UnexpectedTokenInTopLevel(_, _) -> "027"
+    InternalError(_, _, _, _) -> "028"
   }
 }
