@@ -83,7 +83,8 @@ pub type Type {
 /// attributes (or one of the relationships that can be used as external keys).
 /// 
 pub type Key {
-  Key(span: Span, attributes: NonEmptyList(String))
+  SingleKey(span: Span, key: String, type_: Option(Type))
+  ComposedKey(span: Span, keys: NonEmptyList(String))
 }
 
 /// A hierarchy of entities, it specifies wether it is overlapping or disjoint
@@ -294,33 +295,16 @@ fn do_parse_entity_body(
     // If a `-*` is found, switches into key parsing. TODO REWORK THIS ONCE THE
     // AST IS CHANGED TO TAKE INTO ACCOUNT SHORTHAND KEYS
     [#(StarLollipop, lollipop_span), ..tokens] -> {
-      use #(key, attribute), tokens <- try(parse_key(
+      use key, tokens <- try(parse_key(tokens, entity_span, lollipop_span))
+      do_parse_entity_body(
         tokens,
+        entity_name,
         entity_span,
-        lollipop_span,
-      ))
-      case attribute {
-        None ->
-          do_parse_entity_body(
-            tokens,
-            entity_name,
-            entity_span,
-            [key, ..keys],
-            attributes,
-            inner_relationships,
-            children,
-          )
-        Some(attribute) ->
-          do_parse_entity_body(
-            tokens,
-            entity_name,
-            entity_span,
-            [key, ..keys],
-            [attribute, ..attributes],
-            inner_relationships,
-            children,
-          )
-      }
+        [key, ..keys],
+        attributes,
+        inner_relationships,
+        children,
+      )
     }
 
     // If a `->` is found, switches into relationship parsing.
@@ -347,7 +331,7 @@ fn do_parse_entity_body(
     | [#(Word("partial" as totality_string), totality_span), ..tokens] -> {
       case children {
         Some(_) ->
-          todo("E004 move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
+          todo("MORE THAN ONE HIERARCHY move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
         None -> {
           let error =
             parse_error.InternalError(
@@ -683,16 +667,15 @@ fn parse_key(
   tokens: List(#(Token, Span)),
   entity_span: Span,
   lollipop_span: Span,
-) -> ParseResult(#(Key, Option(Attribute))) {
-  do_parse_key(tokens, entity_span, lollipop_span, [])
+) -> ParseResult(Key) {
+  do_parse_key(tokens, entity_span, lollipop_span)
 }
 
 fn do_parse_key(
   tokens: List(#(Token, Span)),
   entity_span: Span,
   lollipop_span: Span,
-  keys: List(String),
-) -> ParseResult(#(Key, Option(Attribute))) {
+) -> ParseResult(Key) {
   case tokens {
     // If there is a multi-item key with an `&` it switches to multi-key
     // parsing.
@@ -702,29 +685,22 @@ fn do_parse_key(
         entity_span,
         lollipop_span,
         first_word_span,
-        [key, ..keys],
+        [key],
       ))
-      #(key, None)
-      |> succeed(tokens)
+      succeed(key, tokens)
     }
 
     // If there is a `:` after the key name it switches to parsing a key
     // shorthand for attribute definition.
-    // TODO SISTEMARE
     [#(Word(key), span), #(Colon, _), ..tokens] -> {
       use type_, tokens <- try(parse_attribute_type(tokens))
-      let attribute = Attribute(span, key, Bounded(1, 1), type_)
-      let key = Key(span, non_empty_list.single(key))
-      #(key, Some(attribute))
-      |> succeed(tokens)
+      succeed(SingleKey(span, key, Some(type_)), tokens)
     }
 
-    // If there is only a word it switches to parsing a key shorthand for an
-    // attribute definition. (But it may also be a key alone and attribute
-    // is duplicate TODO)
+    // If there is no `:` and no `&` then it is a key composed of a single
+    // element.
     [#(Word(key), span), ..tokens] ->
-      #(Key(span, non_empty_list.new(key, keys)), None)
-      |> succeed(tokens)
+      succeed(SingleKey(span, key, None), tokens)
 
     [#(token, span), ..] ->
       parse_error.WrongKeyName(
@@ -782,7 +758,7 @@ fn parse_multi_attribute_key(
     [#(Word(key), last_word_span), ..tokens] ->
       first_word_span
       |> span.merge(with: last_word_span)
-      |> Key(non_empty_list.new(key, keys))
+      |> ComposedKey(non_empty_list.new(key, keys))
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -832,7 +808,6 @@ fn parse_inner_relationship(
         entity_span,
         colon_span,
       ))
-      // TODO HERE I COULD CHANGE THE HINT TO SOMETHING ELSE BUT KEEP THE SAME ERROR
 
       case tokens {
         // ...followed by another name, that is the name of the second entity
@@ -845,7 +820,6 @@ fn parse_inner_relationship(
             entity_span,
             other_name_span,
           ))
-          // TODO HERE I COULD CHANGE THE HINT TO SOMETHING ELSE BUT KEEP THE SAME ERROR
 
           let one_entity =
             RelationshipEntity(entity_span, entity_name, one_cardinality)
