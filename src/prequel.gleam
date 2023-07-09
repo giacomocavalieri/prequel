@@ -329,44 +329,33 @@ fn do_parse_entity_body(
     // If a `total` or `partial` word is found, switches into hierarchy parsing.
     [#(Word("total" as totality_string), totality_span), ..tokens]
     | [#(Word("partial" as totality_string), totality_span), ..tokens] -> {
-      case children {
-        Some(hierarchy) ->
-          parse_error.MoreThanOneHierarchy(
-            enclosing_entity: entity_span,
-            first_hierarchy_span: hierarchy.span,
-            other_hierarchy_span: totality_span,
-            hint: None,
-          )
-          |> fail
-        None -> {
-          let error =
-            parse_error.InternalError(
-              Some(entity_span),
-              totality_span,
-              "A call to `totality_from_string` failed despite this being assumed a correct totality",
-              None,
-            )
+      let error =
+        parse_error.InternalError(
+          Some(entity_span),
+          totality_span,
+          "A call to `totality_from_string` failed despite this being assumed a correct totality",
+          None,
+        )
 
-          let result =
-            result.replace_error(totality_from_string(totality_string), error)
-          use totality <- result.try(result)
-          use children, tokens <- try(parse_hierarchy(
-            tokens,
-            entity_span,
-            totality_span,
-            totality,
-          ))
-          do_parse_entity_body(
-            tokens,
-            entity_name,
-            entity_span,
-            keys,
-            attributes,
-            inner_relationships,
-            Some(children),
-          )
-        }
-      }
+      let result =
+        result.replace_error(totality_from_string(totality_string), error)
+      use totality <- result.try(result)
+      use hierarchy, tokens <- try(parse_hierarchy(
+        tokens,
+        entity_span,
+        totality_span,
+        children,
+        totality,
+      ))
+      do_parse_entity_body(
+        tokens,
+        entity_name,
+        entity_span,
+        keys,
+        attributes,
+        inner_relationships,
+        Some(hierarchy),
+      )
     }
 
     // If someone writes `- o`, `- *` or `- >` it tells them there's possibly
@@ -998,6 +987,7 @@ fn parse_hierarchy(
   tokens: List(#(Token, Span)),
   entity_span: Span,
   totality_span: Span,
+  entity_children: Option(Hierarchy),
   totality: Totality,
 ) -> ParseResult(Hierarchy) {
   case tokens {
@@ -1026,13 +1016,28 @@ fn parse_hierarchy(
       use overlapping <- result.try(result)
 
       let hierarchy_span = span.merge(totality_span, final_span)
-      use entities, tokens <- try(parse_hierarchy_body(
-        tokens,
-        entity_span,
-        hierarchy_span,
-      ))
-      Hierarchy(hierarchy_span, overlapping, totality, entities)
-      |> succeed(tokens)
+
+      // If the entity already has a hierarchy error
+      case entity_children {
+        Some(first_hierarchy) ->
+          parse_error.MoreThanOneHierarchy(
+            enclosing_entity: entity_span,
+            first_hierarchy_span: first_hierarchy.span,
+            other_hierarchy_span: hierarchy_span,
+            hint: None,
+          )
+          |> fail
+
+        None -> {
+          use entities, tokens <- try(parse_hierarchy_body(
+            tokens,
+            entity_span,
+            hierarchy_span,
+          ))
+          Hierarchy(hierarchy_span, overlapping, totality, entities)
+          |> succeed(tokens)
+        }
+      }
     }
 
     // If there is no `{`, reports the error since a hierarchy cannot
