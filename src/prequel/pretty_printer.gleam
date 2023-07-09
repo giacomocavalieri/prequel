@@ -5,8 +5,9 @@ import gleam/option.{None}
 import gleam/order
 import gleam/string_builder.{StringBuilder}
 import prequel.{
-  Attribute, Bounded, Cardinality, Disjoint, Entity, Hierarchy, Key, Module,
-  Overlapped, Partial, Relationship, RelationshipEntity, Total, Unbounded,
+  Attribute, Bounded, Cardinality, ComposedKey, Disjoint, Entity, Hierarchy, Key,
+  Module, Overlapped, Partial, Relationship, RelationshipEntity, SingleKey,
+  Total, Unbounded,
 }
 import non_empty_list
 
@@ -78,13 +79,18 @@ fn pretty_entity_body(entity: Entity, indentation: Int) -> StringBuilder {
 }
 
 fn pretty_key(key: Key, indentation: Int) -> StringBuilder {
-  // TODO CHANGE THE AST TO KEEP SHORTHAND KEYS OTHERWISE THE PRINTER NEEDS TO
-  // ALWAYS PRINT THE KEY AND ATTRIBUTE!!!!!!!!!!!
-  key.attributes
-  |> non_empty_list.to_list
-  |> list.intersperse(" & ")
-  |> string_builder.from_strings
-  |> string_builder.prepend_builder(indent_string("-* ", indentation))
+  case key {
+    SingleKey(_, key, type_) ->
+      indent_string("-* ", indentation)
+      |> string_builder.append(key)
+    // TODO pretty type
+    ComposedKey(_, keys) ->
+      keys
+      |> non_empty_list.to_list
+      |> list.intersperse(" & ")
+      |> string_builder.from_strings
+      |> string_builder.prepend_builder(indent_string("-* ", indentation))
+  }
 }
 
 fn pretty_attribute(attribute: Attribute, indentation: Int) -> StringBuilder {
