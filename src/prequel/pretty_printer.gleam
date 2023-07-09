@@ -96,7 +96,7 @@ fn pretty_key(key: Key, indentation: Int) -> StringBuilder {
 fn pretty_attribute(attribute: Attribute, indentation: Int) -> StringBuilder {
   let lollipop = indent_string("-o ", indentation)
   case attribute.cardinality {
-    Bounded(1, 1) -> string_builder.append(lollipop, attribute.name)
+    Bounded(_, 1, 1) -> string_builder.append(lollipop, attribute.name)
     _ -> {
       lollipop
       |> string_builder.append(attribute.name)
@@ -149,7 +149,7 @@ fn pretty_inner_relationship(
 
 fn pretty_cardinality(cardinality: Cardinality) -> StringBuilder {
   case cardinality {
-    Bounded(min, max) ->
+    Bounded(_, min, max) ->
       string_builder.from_strings([
         "(",
         int.to_string(min),
@@ -157,7 +157,7 @@ fn pretty_cardinality(cardinality: Cardinality) -> StringBuilder {
         int.to_string(max),
         ")",
       ])
-    Unbounded(min) ->
+    Unbounded(_, min) ->
       string_builder.from_strings(["(", int.to_string(min), "-N)"])
   }
 }

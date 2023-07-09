@@ -65,11 +65,11 @@ pub type Cardinality {
   /// A cardinality where both upper and lower bound are numbers,
   /// for example `(0-1)`, `(1-1)` are both bounded.
   /// 
-  Unbounded(minimum: Int)
+  Unbounded(span: Option(Span), minimum: Int)
 
   /// A cardinality where the upper bound is the letter `N`,
   /// for example `(1-N)`, `(0-N)` are both unbounded.
-  Bounded(minimum: Int, maximum: Int)
+  Bounded(span: Option(Span), minimum: Int, maximum: Int)
 }
 
 /// The type of an attribute.
@@ -330,8 +330,14 @@ fn do_parse_entity_body(
     [#(Word("total" as totality_string), totality_span), ..tokens]
     | [#(Word("partial" as totality_string), totality_span), ..tokens] -> {
       case children {
-        Some(_) ->
-          todo("MORE THAN ONE HIERARCHY move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
+        Some(hierarchy) ->
+          parse_error.MoreThanOneHierarchy(
+            enclosing_entity: entity_span,
+            first_hierarchy_span: hierarchy.span,
+            other_hierarchy_span: totality_span,
+            hint: None,
+          )
+          |> fail
         None -> {
           let error =
             parse_error.InternalError(
@@ -460,7 +466,7 @@ fn parse_attribute(
     // Parse an attribute that has no type/cardinality annotation, the default
     // cardinality of (1-1) is used.
     [#(Word(name), name_span), ..tokens] ->
-      Attribute(name_span, name, Bounded(1, 1), NoType)
+      Attribute(name_span, name, Bounded(None, 1, 1), NoType)
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -522,32 +528,38 @@ fn parse_cardinality(
   case tokens {
     // Parses a bounded cardinality in the form `(<number> - <number>)`.
     [
-      #(OpenParens, _),
+      #(OpenParens, start),
       #(Number(raw_lower), raw_lower_span),
       #(Minus, _),
       #(Number(raw_upper), raw_upper_span),
-      #(CloseParens, _),
+      #(CloseParens, end),
       ..tokens
     ] -> {
       let result = parse_number(raw_lower, raw_lower_span, enclosing_span)
       use lower <- result.try(result)
       let result = parse_number(raw_upper, raw_upper_span, enclosing_span)
       use upper <- result.try(result)
-      succeed(Bounded(lower, upper), tokens)
+      span.merge(start, end)
+      |> Some
+      |> Bounded(lower, upper)
+      |> succeed(tokens)
     }
 
     // Parse an unbounded cardinality in the form `(<number> - N)`.
     [
-      #(OpenParens, _),
+      #(OpenParens, start),
       #(Number(raw_lower), raw_lower_span),
       #(Minus, _),
       #(Word("N"), _),
-      #(CloseParens, _),
+      #(CloseParens, end),
       ..tokens
     ] -> {
       let result = parse_number(raw_lower, raw_lower_span, enclosing_span)
       use lower <- result.try(result)
-      succeed(Unbounded(lower), tokens)
+      span.merge(start, end)
+      |> Some
+      |> Unbounded(lower)
+      |> succeed(tokens)
     }
 
     // If one writes a letter that is not `N` in an unbounded cardinality, it
@@ -623,7 +635,7 @@ fn parse_cardinality(
     // If it is lenient and did not incur in any obvious mistake it defaults
     // to the `(1-1)` cardinality.
     [_, ..] if lenient ->
-      Bounded(1, 1)
+      Bounded(None, 1, 1)
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -855,7 +867,7 @@ fn parse_inner_relationship(
         [#(token, span), ..] ->
           parse_error.WrongEntityName(
             enclosing_definition: Some(entity_span),
-            before_wrong_name: todo("it should be the span of the cardinality!"),
+            before_wrong_name: option.unwrap(one_cardinality.span, colon_span),
             wrong_name: token.to_string(token),
             wrong_name_span: span,
             hint: None,
