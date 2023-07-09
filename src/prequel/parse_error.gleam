@@ -131,6 +131,56 @@ pub type ParseError {
     hierarchy_span: Span,
     hint: Option(String),
   )
+
+  UnexpectedTokenInHierarchyBody(
+    enclosing_hierarchy: Span,
+    token_span: Span,
+    hint: Option(String),
+  )
+
+  EmptyRelationshipBody(relationship_span: Span, hint: Option(String))
+
+  RelationshipBodyWithJustOneEntity(
+    relationship_span: Span,
+    relationship_name: String,
+    entity_span: Span,
+    hint: Option(String),
+  )
+
+  UnexpectedTokenInRelationshipBody(
+    enclosing_relationship: Span,
+    token_span: Span,
+    hint: Option(String),
+  )
+
+  UnexpectedTokenInTopLevel(token_span: Span, hint: Option(String))
+
+  WrongLetterInUnboundedCardinality(
+    enclosing_definition: Span,
+    wrong_letter_span: Span,
+    hint: Option(String),
+  )
+
+  IncompleteCardinality(
+    enclosing_definition: Span,
+    cardinality_span: Span,
+    missing: String,
+    hint: Option(String),
+  )
+
+  UnexpectedEndOfFile(
+    enclosing_definition: Option(Span),
+    context_span: Span,
+    context: String,
+    hint: Option(String),
+  )
+
+  InternalError(
+    enclosing_definition: Option(Span),
+    context_span: Span,
+    context: String,
+    hint: Option(String),
+  )
 }
 
 pub fn to_code(error: ParseError) -> Int {
@@ -154,5 +204,14 @@ pub fn to_code(error: ParseError) -> Int {
     WrongHierarchyOverlapping(_, _, _, _, _) -> 27
     MissingHierarchyKeyword(_, _, _) -> 28
     EmptyHierarchy(_, _, _) -> 29
+    UnexpectedTokenInHierarchyBody(_, _, _) -> 31
+    EmptyRelationshipBody(_, _) -> 32
+    RelationshipBodyWithJustOneEntity(_, _, _, _) -> 33
+    UnexpectedTokenInRelationshipBody(_, _, _) -> 34
+    WrongLetterInUnboundedCardinality(_, _, _) -> 15
+    IncompleteCardinality(_, _, _, _) -> 16
+    UnexpectedEndOfFile(_, _, _, _) -> 3
+    UnexpectedTokenInTopLevel(_, _) -> 99
+    InternalError(_, _, _, _) -> 100
   }
 }

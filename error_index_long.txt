@@ -198,7 +198,6 @@ An entity's body can only contain:
 (b) to define an entity taking part into a relationship you can...
 
 
-TO DO BELOW -----------vvv
 
 [ E023 ] Error: Wrong relationship name
     ╭─── Hello.prequel:1:1
@@ -238,19 +237,6 @@ in case it regards a binary rel inside an entity it should look like this:
 
 
 
-[ E025 ] Error: No entities allowed inside shorthand binary relationships
-    ╭─── Hello.prequel:1:1
-    │
-  1 │   -> rel : (1-1) baz (0-N) {
-    ┆
-  7 │     -> foobar
-    ┆     ┬─ 
-    ┆     ╰─ A binary relationship defined inside an entity cannot contain
-    ┆        other `->` lollipops. To turn it into an N-ary relationship you
-    ┆        have to define `rel` as a standalone relationship
-
-
-
 [ E026 ] Error: Unexpected token inside binary relationship shorthand
     ╭─── Hello.prequel:1:1
     │
@@ -274,8 +260,8 @@ A binary relationship's body can only contain:
  18 │     total overlapping hierarchy
     ┆     ┬──── ───────────
     ┆     ╰─ I was expecting to find an overlapping mode (one of `overlapped`
-    ┆        or `disjoint`) after this but I ran into `overlapping` which is not
-    ┆        a valid mode        
+    ┆        or `disjoint`) after this, but I ran into `overlapping` which is
+    ┆        not a valid mode        
 
 
 
@@ -285,20 +271,20 @@ A binary relationship's body can only contain:
   4 │   entity test {
     ┆ 
  18 │     total overlapping -o
-    ┆           ┬────────── ──
+    ┆           ┬────────── 
     ┆           ╰─ I was expecting to find the `hierarchy` keyword after this
-    ┆              but instead I ran into `-o`
 
 
 
 [ E029 ] Error: Empty hierarchy's body
     ╭─── Hello.prequel:1:1
     │
-  4 │     total overlapping hierarchy {
-    │       relationship foo {
-    ┆       ┬───────────
-    ┆       ╰─ This hierarchy has an empty body but I was expecting it to have
-    ┆          at least one sub entity
+  4 │   entity test {
+    ┆ 
+ 18 │     total overlapping hierarchy
+    ┆     ┬────────────────────────── 
+    ┆     ╰─ This hierarchy has an empty body but I was expecting it to have
+    ┆        at least one sub entity
 
 
 
@@ -368,7 +354,7 @@ A relationship can only contain...
     ┆                  ┬───
     ┆                  ╰─ This looks like a cardinality annotation but it is
     ┆                     missing a `)`
-                         
+ 
 
 
 [ E016 ] Error: Incomplete cardinality annotation (upper bound)
@@ -418,8 +404,12 @@ A relationship can only contain...
     ┆                     missing an `(` before the lower bound
 
 
-
-
+[ E003 ] Error: Unexpected end of file (entity)
+    ╭─── Hello.prequel:1:1
+    │
+  1 │ entity
+    ┆ ┬─────
+    ┆ ╰─ I ran into the end of file halfway through parsing this entity
 
 [ E014 ] Error: Internal compiler bug (number token does not hold a number)
     ╭─── Hello.prequel:1:1
@@ -432,12 +422,4 @@ A relationship can only contain...
 
 This is definetly a compiler bug! Please report this issue on GitHub at:
 https://foobarbaz.com
-
-
-[ E003 ] Error: Unexpected end of file (entity)
-    ╭─── Hello.prequel:1:1
-    │
-  1 │ entity
-    ┆ ┬─────
-    ┆ ╰─ I ran into the end of file halfway through parsing this entity
 

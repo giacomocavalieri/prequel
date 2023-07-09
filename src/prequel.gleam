@@ -7,6 +7,8 @@ import prequel/internals/token.{
 import prequel/span.{Span}
 import prequel/parse_error.{ParseError}
 import non_empty_list.{NonEmptyList}
+import gleam/result
+import gleam/int
 
 /// A module is the result obtained by parsing a file, it contains a list of
 /// entities and relationships.
@@ -139,7 +141,7 @@ pub fn parse(source: String) -> Result(Module, ParseError) {
   }
 }
 
-/// Tail recursive (hopefully, I should check it TODO) parser.
+/// Tail recursive (hopefully, I should check it!! TODO) parser.
 /// 
 fn do_parse(
   tokens: List(#(Token, Span)),
@@ -155,6 +157,7 @@ fn do_parse(
       use entity, tokens <- try(parse_entity(tokens, entity_keyword_span))
       do_parse(tokens, [entity, ..entities], relationships)
     }
+
     [#(Word("relationship"), relationship_span), ..tokens] -> {
       use relationship, tokens <- try(parse_relationship(
         tokens,
@@ -162,7 +165,10 @@ fn do_parse(
       ))
       do_parse(tokens, entities, [relationship, ..relationships])
     }
-    [#(_, _), ..] -> todo("nice error")
+
+    [#(_, span), ..] ->
+      parse_error.UnexpectedTokenInTopLevel(token_span: span, hint: None)
+      |> fail
   }
 }
 
@@ -216,7 +222,14 @@ fn parse_entity(
       )
       |> fail
 
-    [] -> todo("E003-entity")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: None,
+        context_span: entity_keyword_span,
+        context: "this entity",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -336,8 +349,17 @@ fn do_parse_entity_body(
         Some(_) ->
           todo("E004 move this down once a real hierarchy is found otherwise it would only highlight the first word and not everything like in the example")
         None -> {
-          // Todo wrap in an internal error!
-          let assert Ok(totality) = totality_from_string(totality_string)
+          let error =
+            parse_error.InternalError(
+              Some(entity_span),
+              totality_span,
+              "A call to `totality_from_string` failed despite this being assumed a correct totality",
+              None,
+            )
+
+          let result =
+            result.replace_error(totality_from_string(totality_string), error)
+          use totality <- result.try(result)
           use children, tokens <- try(parse_hierarchy(
             tokens,
             entity_span,
@@ -416,7 +438,14 @@ fn do_parse_entity_body(
       )
       |> fail
 
-    [] -> todo("E003 (while parsing the body of this entity)")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: None,
+        context_span: entity_span,
+        context: "the body of this entity",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -460,7 +489,14 @@ fn parse_attribute(
       )
       |> fail
 
-    [] -> todo("E003 (attribute)")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(enclosing_span),
+        context_span: lollipop_span,
+        context: "this attribute",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -503,33 +539,31 @@ fn parse_cardinality(
     // Parses a bounded cardinality in the form `(<number> - <number>)`.
     [
       #(OpenParens, _),
-      #(Number(raw_lower), _),
+      #(Number(raw_lower), raw_lower_span),
       #(Minus, _),
-      #(Number(raw_upper), _),
+      #(Number(raw_upper), raw_upper_span),
       #(CloseParens, _),
       ..tokens
     ] -> {
-      //use lower <- result.try(int.parse(raw_lower))
-      // todo("E014")
-      //use upper <- result.map(int.parse(raw_upper))
-      // todo("E014")
-      //#(Bounded(lower, upper), tokens)
-      todo
+      let result = parse_number(raw_lower, raw_lower_span, enclosing_span)
+      use lower <- result.try(result)
+      let result = parse_number(raw_upper, raw_upper_span, enclosing_span)
+      use upper <- result.try(result)
+      succeed(Bounded(lower, upper), tokens)
     }
 
     // Parse an unbounded cardinality in the form `(<number> - N)`.
     [
       #(OpenParens, _),
-      #(Number(raw_lower), _),
+      #(Number(raw_lower), raw_lower_span),
       #(Minus, _),
       #(Word("N"), _),
       #(CloseParens, _),
       ..tokens
     ] -> {
-      //use lower <- result.map(int.parse(raw_lower))
-      // todo("E014")
-      //#(Unbounded(lower), tokens)
-      todo
+      let result = parse_number(raw_lower, raw_lower_span, enclosing_span)
+      use lower <- result.try(result)
+      succeed(Unbounded(lower), tokens)
     }
 
     // If one writes a letter that is not `N` in an unbounded cardinality, it
@@ -538,27 +572,69 @@ fn parse_cardinality(
       #(OpenParens, _),
       #(Number(_), _),
       #(Minus, _),
-      #(Word(_), _),
+      #(Word(_), span),
       #(CloseParens, _),
       ..
-    ] -> todo("E015")
+    ] ->
+      parse_error.WrongLetterInUnboundedCardinality(
+        enclosing_definition: enclosing_span,
+        wrong_letter_span: span,
+        hint: None,
+      )
+      |> fail
 
     // If the cardinality is correct but is missing the closing parentheses. 
-    [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Number(_), _), ..]
-    | [#(OpenParens, _), #(Number(_), _), #(Minus, _), #(Word(_), _), ..] ->
-      todo("E016")
+    [#(OpenParens, start), #(Number(_), _), #(Minus, _), #(Number(_), end), ..]
+    | [#(OpenParens, start), #(Number(_), _), #(Minus, _), #(Word(_), end), ..] ->
+      parse_error.IncompleteCardinality(
+        enclosing_definition: enclosing_span,
+        cardinality_span: span.merge(start, end),
+        missing: "a closed parentheses",
+        hint: None,
+      )
+      |> fail
 
     // If the cardinality is (mostly) correct but is missing the second number.
-    [#(OpenParens, _), #(Number(_), _), #(Minus, _), ..] -> todo("E016")
+    [#(OpenParens, start), #(Number(_), _), #(Minus, end), ..] ->
+      parse_error.IncompleteCardinality(
+        enclosing_definition: enclosing_span,
+        cardinality_span: span.merge(start, end),
+        missing: "an upper bound",
+        hint: None,
+      )
+      |> fail
 
     // If the cardinality is (mostly) correct but is missing the `-`.
-    [#(OpenParens, _), #(Number(_), _), ..] -> todo("E016")
+    [#(OpenParens, start), #(Number(_), end), ..] ->
+      parse_error.IncompleteCardinality(
+        enclosing_definition: enclosing_span,
+        cardinality_span: span.merge(start, end),
+        missing: "an upper bound",
+        hint: None,
+      )
+      |> fail
 
     // If there is an `(` but nothing else making it a cardinality.
-    [#(OpenParens, _), ..] -> todo("E016")
+    [#(OpenParens, span), ..] ->
+      parse_error.IncompleteCardinality(
+        enclosing_definition: enclosing_span,
+        cardinality_span: span,
+        missing: "a lower bound",
+        hint: None,
+      )
+      |> fail
 
     // If there is a number it suggests that they probably forgot the `(`.
-    [#(Number(n), _), ..] -> todo("E016")
+    // TODO: This could be a bit more sophisticated and look ahead to see
+    //       if what comes after actually resembles a cardinality
+    [#(Number(_), span), ..] ->
+      parse_error.IncompleteCardinality(
+        enclosing_definition: enclosing_span,
+        cardinality_span: span,
+        missing: "an open parentheses",
+        hint: None,
+      )
+      |> fail
 
     // If it is lenient and did not incur in any obvious mistake it defaults
     // to the `(1-1)` cardinality.
@@ -576,8 +652,29 @@ fn parse_cardinality(
       )
       |> fail
 
-    [] -> todo("E003")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(enclosing_span),
+        context_span: preceding_span,
+        context: "the cardinality of this element",
+        hint: None,
+      )
+      |> fail
   }
+}
+
+fn parse_number(
+  raw_number: String,
+  raw_number_span: Span,
+  enclosing_span: Span,
+) -> Result(Int, ParseError) {
+  int.parse(raw_number)
+  |> result.replace_error(parse_error.InternalError(
+    enclosing_definition: Some(enclosing_span),
+    context_span: raw_number_span,
+    context: "This was assumed to be a number",
+    hint: None,
+  ))
 }
 
 /// Parses a key once the `-*` is found.
@@ -639,7 +736,14 @@ fn do_parse_key(
       )
       |> fail
 
-    [] -> todo("E003 (parsing key)")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: lollipop_span,
+        context: "this key",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -691,7 +795,14 @@ fn parse_multi_attribute_key(
       )
       |> fail
 
-    [] -> todo("E003 (parsing key)")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: lollipop_span,
+        context: "this key",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -748,6 +859,7 @@ fn parse_inner_relationship(
               use attributes, tokens <- try(parse_inner_relationship_body(
                 tokens,
                 relationship_span,
+                entity_span,
               ))
               Relationship(
                 relationship_span,
@@ -776,7 +888,14 @@ fn parse_inner_relationship(
           )
           |> fail
 
-        [] -> todo("E003 while parsing binary relationship")
+        [] ->
+          parse_error.UnexpectedEndOfFile(
+            enclosing_definition: Some(entity_span),
+            context_span: lollipop_span,
+            context: "this relationship",
+            hint: None,
+          )
+          |> fail
       }
     }
 
@@ -799,7 +918,15 @@ fn parse_inner_relationship(
         hint: None,
       )
       |> fail
-    [] -> todo("E003")
+
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: lollipop_span,
+        context: "this relationship",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -808,13 +935,15 @@ fn parse_inner_relationship(
 fn parse_inner_relationship_body(
   tokens: List(#(Token, Span)),
   relationship_span: Span,
+  entity_span: Span,
 ) -> ParseResult(List(Attribute)) {
-  do_parse_inner_relationship_body(tokens, relationship_span, [])
+  do_parse_inner_relationship_body(tokens, relationship_span, entity_span, [])
 }
 
 fn do_parse_inner_relationship_body(
   tokens: List(#(Token, Span)),
   relationship_span: Span,
+  entity_span: Span,
   attributes: List(Attribute),
 ) -> ParseResult(List(Attribute)) {
   case tokens {
@@ -833,6 +962,7 @@ fn do_parse_inner_relationship_body(
       do_parse_inner_relationship_body(
         tokens,
         relationship_span,
+        entity_span,
         [attribute, ..attributes],
       )
     }
@@ -865,7 +995,14 @@ fn do_parse_inner_relationship_body(
       )
       |> fail
 
-    [] -> todo("E003")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: relationship_span,
+        context: "the body of this relationship",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -881,22 +1018,34 @@ fn parse_hierarchy(
     // If the correct overlapping and the `hierarchy` keyword are found,
     // switches to parsing the hierarchy's body.
     [
-      #(Word("overlapped" as word), _),
+      #(Word("overlapped" as word), word_span),
       #(Word("hierarchy"), final_span),
       #(OpenBracket, _),
       ..tokens
     ]
     | [
-      #(Word("disjoint" as word), _),
+      #(Word("disjoint" as word), word_span),
       #(Word("hierarchy"), final_span),
       #(OpenBracket, _),
       ..tokens
     ] -> {
-      let assert Ok(overlapping) = overlapping_from_string(word)
-      use entities, tokens <- try(parse_hierarchy_body(tokens))
-      totality_span
-      |> span.merge(with: final_span)
-      |> Hierarchy(overlapping, totality, entities)
+      let error =
+        parse_error.InternalError(
+          Some(entity_span),
+          word_span,
+          "A call to `overlapping_from_string` failed despite this being assumed a correct overlapping",
+          None,
+        )
+      let result = result.replace_error(overlapping_from_string(word), error)
+      use overlapping <- result.try(result)
+
+      let hierarchy_span = span.merge(totality_span, final_span)
+      use entities, tokens <- try(parse_hierarchy_body(
+        tokens,
+        entity_span,
+        hierarchy_span,
+      ))
+      Hierarchy(hierarchy_span, overlapping, totality, entities)
       |> succeed(tokens)
     }
 
@@ -932,7 +1081,14 @@ fn parse_hierarchy(
       )
       |> fail
 
-    [] -> todo("E003")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: totality_span,
+        context: "this hierarchy",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -940,35 +1096,62 @@ fn parse_hierarchy(
 /// 
 fn parse_hierarchy_body(
   tokens: List(#(Token, Span)),
+  entity_span: Span,
+  hierarchy_span: Span,
 ) -> ParseResult(NonEmptyList(Entity)) {
-  do_parse_hierarchy_body(tokens, [])
+  do_parse_hierarchy_body(tokens, [], entity_span, hierarchy_span)
 }
 
 fn do_parse_hierarchy_body(
   tokens: List(#(Token, Span)),
   entities: List(Entity),
+  entity_span: Span,
+  hierarchy_span: Span,
 ) -> ParseResult(NonEmptyList(Entity)) {
   case tokens {
     // If a `}` is found ends the parsing process. A check is performed to
     // guarantee that there was at least an entity in the hierarchy's body.
     [#(CloseBracket, _), ..tokens] -> {
-      // Todo replace with internal error
-      let assert Ok(entities) =
-        entities
-        |> list.reverse
-        |> non_empty_list.from_list
+      let error =
+        parse_error.EmptyHierarchy(
+          enclosing_entity: entity_span,
+          hierarchy_span: hierarchy_span,
+          hint: None,
+        )
       entities
-      |> succeed(tokens)
+      |> list.reverse
+      |> non_empty_list.from_list
+      |> result.replace_error(error)
+      |> result.try(succeed(_, tokens))
     }
 
     // If the `entity` keyword is found, switches to entity parsing.
     [#(Word("entity"), span), ..tokens] -> {
       use entity, tokens <- try(parse_entity(tokens, span))
-      do_parse_hierarchy_body(tokens, [entity, ..entities])
+      do_parse_hierarchy_body(
+        tokens,
+        [entity, ..entities],
+        entity_span,
+        hierarchy_span,
+      )
     }
 
-    [#(_, _), ..] -> todo("E031")
-    [] -> todo("E003")
+    [#(_, span), ..] ->
+      parse_error.UnexpectedTokenInHierarchyBody(
+        enclosing_hierarchy: hierarchy_span,
+        token_span: span,
+        hint: None,
+      )
+      |> fail
+
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(entity_span),
+        context_span: hierarchy_span,
+        context: "this hierarchy",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -986,7 +1169,9 @@ fn parse_relationship(
 
     // If there is the relationship's name but no `{` reports it as an error
     // since a relationship must always have a body.
-    [#(Word(_), _), ..] -> todo("E032")
+    [#(Word(_), name_span), ..] ->
+      parse_error.EmptyRelationshipBody(name_span, None)
+      |> fail
 
     [#(token, span), ..] ->
       parse_error.WrongRelationshipName(
@@ -997,7 +1182,15 @@ fn parse_relationship(
         hint: None,
       )
       |> fail
-    [] -> todo("E003")
+
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: None,
+        context_span: relationship_keyword_span,
+        context: "this relationship",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -1033,7 +1226,19 @@ fn do_parse_relationship_body(
             attributes,
           )
           |> succeed(tokens)
-        _ -> todo("E032 o E033 a seconda del numero")
+
+        [one_entity] ->
+          parse_error.RelationshipBodyWithJustOneEntity(
+            relationship_span: relationship_span,
+            relationship_name: relationship_name,
+            entity_span: one_entity.span,
+            hint: None,
+          )
+          |> fail
+
+        [] ->
+          parse_error.EmptyRelationshipBody(relationship_span, None)
+          |> fail
       }
 
     // If a `-o` is found, switch to attribute parsing.
@@ -1096,8 +1301,22 @@ fn do_parse_relationship_body(
       )
       |> fail
 
-    [#(_, _), ..] -> todo("E034")
-    [] -> todo("E003")
+    [#(_, span), ..] ->
+      parse_error.UnexpectedTokenInRelationshipBody(
+        enclosing_relationship: relationship_span,
+        token_span: span,
+        hint: None,
+      )
+      |> fail
+
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: None,
+        context_span: relationship_span,
+        context: "this relationship",
+        hint: None,
+      )
+      |> fail
   }
 }
 
@@ -1141,6 +1360,13 @@ fn parse_relationship_entity(
       )
       |> fail
 
-    [] -> todo("E003")
+    [] ->
+      parse_error.UnexpectedEndOfFile(
+        enclosing_definition: Some(relationship_span),
+        context_span: lollipop_span,
+        context: "this entity",
+        hint: None,
+      )
+      |> fail
   }
 }
