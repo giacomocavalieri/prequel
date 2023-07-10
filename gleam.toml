@@ -12,6 +12,9 @@ description = "A markup language for defining ER schemas"
 [dependencies]
 gleam_stdlib = "~> 0.29"
 non_empty_list = "~> 1.0"
+gleam_community_ansi = "~> 1.1"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
+gap = "~> 0.5"
+simplifile = "~> 0.1"

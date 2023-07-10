@@ -314,7 +314,7 @@ A hierarchy's body can only contain...
     ╭─── Hello.prequel:1:1
     │
   4 │  relationship foo {
-    ┆    -> faz
+  5 │    -> faz
     ┆       ┬──
     ┆       ╰─ This is the only entity taking part into the relationship `foo`
     ┆          but every relationship should have at least two entities taking
