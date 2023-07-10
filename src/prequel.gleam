@@ -747,7 +747,7 @@ fn parse_multi_attribute_key(
     // If there is a `:` it reports an error since a multi-key cannot
     // have a type annotation.
     [#(Word(_), last_word_span), #(Colon, colon_span), ..] ->
-      parse_error.TypeAnnotationOnMultiItemKey(
+      parse_error.TypeAnnotationOnComposedKey(
         enclosing_entity: entity_span,
         key_words_span: span.merge(first_word_span, last_word_span),
         colon_span: colon_span,
