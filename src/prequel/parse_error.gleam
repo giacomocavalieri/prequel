@@ -7,6 +7,8 @@ import gleam/int
 import gleam/list
 import non_empty_list.{NonEmptyList}
 import gleam/pair
+import gleam/bool
+import gleam/result
 
 /// TODO: document these errors and when each one makes sense with a little example
 pub type ParseError {
@@ -347,11 +349,55 @@ pub fn main_span(error: ParseError) -> Span {
   }
 }
 
+pub fn context_span(error: ParseError) -> Option(Span) {
+  case error {
+    WrongEntityName(span, _, _, _, _) -> span
+    MoreThanOneHierarchy(span, _, _, _) -> Some(span)
+    PossibleCircleLollipopTypo(span, _, _) -> Some(span)
+    PossibleStarLollipopTypo(span, _, _) -> Some(span)
+    PossibleArrowLollipopTypo(span, _, _) -> Some(span)
+    WrongOrderOfHierarchyQualifiers(span, _, _, _, _) -> Some(span)
+    UnqualifiedHierarchy(span, _, _) -> Some(span)
+    UnexpectedTokenInEntityBody(span, _, _) -> Some(span)
+    WrongAttributeName(span, _, _, _, _) -> Some(span)
+    WrongCardinalityAnnotation(span, _, _, _, _) -> Some(span)
+    WrongKeyName(span, _, _, _, _) -> Some(span)
+    TypeAnnotationOnComposedKey(span, _, _, _) -> Some(span)
+    MissingCardinalityAnnotation(span, _, _) -> Some(span)
+    WrongRelationshipName(span, _, _, _, _) -> span
+    KeyInsideRelationship(span, _, _) -> Some(span)
+    UnexpectedTokenInBinaryRelationship(span, _, _) -> Some(span)
+    WrongHierarchyOverlapping(span, _, _, _, _) -> Some(span)
+    MissingHierarchyKeyword(span, _, _) -> Some(span)
+    EmptyHierarchy(span, _, _) -> Some(span)
+    UnexpectedTokenInHierarchyBody(span, _, _) -> Some(span)
+    EmptyRelationshipBody(span, _) -> Some(span)
+    RelationshipBodyWithJustOneEntity(span, _, _, _) -> Some(span)
+    UnexpectedTokenInRelationshipBody(span, _, _) -> Some(span)
+    WrongLetterInUnboundedCardinality(span, _, _) -> Some(span)
+    IncompleteCardinality(span, _, _, _) -> Some(span)
+    UnexpectedEndOfFile(span, _, _, _) -> span
+    UnexpectedTokenInTopLevel(span, _) -> Some(span)
+    InternalError(span, _, _, _) -> span
+  }
+}
+
 const error_heading_length = 8
 
-type LineKind {
-  ErrorLine
-  ContextLine
+pub type ReportBlock {
+  ErrorBlock(pointed: Span, underlined: List(Span), message: String)
+  ContextBlock(span: Span)
+}
+
+pub fn pretty_report(
+  source_code: String,
+  blocks: List(ReportBlock),
+) -> StringBuilder {
+  let source_code_lines =
+    string.split(source_code, on: "\n")
+    |> list.index_map(fn(index, line) { #(index + 1, line) })
+
+  todo
 }
 
 /// Pretty prints an error
@@ -362,42 +408,111 @@ pub fn pretty(
   source_code: String,
   error: ParseError,
 ) -> String {
-  let error_heading = error_heading(error)
-  let spans = spans(error)
-  let max_line_digits = count_digits(span.max_line(spans))
-  let min_line = span.min_line(spans)
-  let main_span = main_span(error)
-  let file_heading =
-    file_heading(
-      source_file_name,
-      max_line_digits,
-      min_line,
-      main_span.line_start,
-      main_span.column_start,
-    )
-
-  let source_code_lines = string.split(source_code, on: "\n")
-
-  let lines =
-    source_code_lines
+  let source_code_lines =
+    source_code
+    |> string.split(on: "\n")
     |> list.index_map(fn(index, line) { #(index + 1, line) })
-    |> list.drop(main_span.line_start - 1)
-    |> list.take(main_span.line_end - main_span.line_start + 1)
-    |> list.map(fn(pair) {
-      let #(line_number, line) = pair
-      let line = show_line(line_number, line, max_line_digits, ErrorLine)
-      #(line_number, line)
-    })
-    // Todo better way to merge putting ... if lines are not consecutive
-    |> list.map(pair.second)
-    |> string_builder.join("\n")
 
-  [error_heading, "\n", file_heading]
-  |> string_builder.from_strings
-  |> string_builder.append_builder(lines)
+  let error_heading = error_heading(error)
+  let file_heading = file_heading(error, source_file_name)
+  let context_lines =
+    show_context_lines(source_code_lines, error)
+    |> option.unwrap(string_builder.new())
+
+  let error_lines =
+    show_error_lines(source_code_lines, error)
+    |> option.unwrap(string_builder.new())
+
+  [error_heading, file_heading, context_lines, error_lines]
+  |> list.filter(fn(sb) { !string_builder.is_empty(sb) })
+  |> string_builder.join("\n")
   |> string_builder.to_string
 }
 
+/// Returns the lines of the corresponding span.
+/// 
+fn get_span_lines(
+  source_code_lines: List(#(Int, String)),
+  span: Span,
+) -> List(#(Int, String)) {
+  source_code_lines
+  |> list.drop(span.line_start - 1)
+  |> list.take(span.line_end - span.line_start + 1)
+}
+
+/// Given a list of source code lines and an error it returns a `StringBuilder`
+/// disaplying the context lines of that error. If the error doesn't have a
+/// context to show, an empty optional is returned.
+///
+fn show_context_lines(
+  source_code_lines: List(#(Int, String)),
+  error: ParseError,
+) -> Option(StringBuilder) {
+  use span <- option.map(context_span(error))
+  let max_line_digits = count_digits(span.max_line(spans(error)))
+
+  get_span_lines(source_code_lines, span)
+  |> list.map(fn(pair) {
+    let #(line_number, line) = pair
+    let line = show_line(line_number, line, max_line_digits, ContextLine)
+    #(line_number, line)
+  })
+  |> join_lines(max_line_digits)
+}
+
+fn show_error_lines(
+  source_code_lines: List(#(Int, String)),
+  error: ParseError,
+) -> StringBuilder {
+  let report_lines = report_lines(error)
+  show_report_line()
+}
+
+/// Joins a list of `StringBuilder`s, one for each line, paired with the number
+/// of the corresponding line. If two lines are consecutive they are joined with
+/// a newline; otherwise, a dashed empty line is inserted between them.
+/// 
+fn join_lines(
+  lines: List(#(Int, StringBuilder)),
+  max_line_digits: Int,
+) -> StringBuilder {
+  case lines {
+    [] -> string_builder.new()
+    [first, ..rest] ->
+      do_join_lines(non_empty_list.new(first, rest), max_line_digits)
+      |> pair.second
+  }
+}
+
+fn do_join_lines(
+  lines: NonEmptyList(#(Int, StringBuilder)),
+  max_line_digits: Int,
+) -> #(Int, StringBuilder) {
+  let padding = string.repeat(" ", max_line_digits + 2)
+  let separator = string_builder.from_strings([padding, "┆"])
+
+  use #(last_number, acc), #(number, line) <- list.fold(lines.rest, lines.first)
+  let are_consecutive = last_number - 1 == number
+  case are_consecutive {
+    True -> [acc, line]
+    False -> [acc, separator, line]
+  }
+  |> string_builder.join("\n")
+  |> pair.new(number, _)
+}
+
+/// The kind of a line to display to toggle different styles.
+/// 
+type LineKind {
+  ErrorLine
+  ContextLine
+}
+
+/// Displays a line with a number on the left padded to accomodate for
+/// at most `max_line_digits`.
+/// Based on the kind of line the display style may change: for now, in case the
+/// line is an `ErrorLine`, the line number is highlighted in red.
+/// 
 fn show_line(
   line_number: Int,
   line: String,
@@ -406,19 +521,14 @@ fn show_line(
 ) -> StringBuilder {
   let digits = count_digits(line_number)
   let left_padding_size = max_line_digits - digits + 1
+  let left_padding = string.repeat(" ", left_padding_size)
   let line_number = case line_kind {
     ErrorLine -> ansi.red(int.to_string(line_number))
     ContextLine -> int.to_string(line_number)
   }
 
-  [string.repeat(" ", left_padding_size), line_number, " │ ", line]
+  [left_padding, line_number, " ", "│", " ", line]
   |> string_builder.from_strings
-}
-
-/// TODO: move to int_extra utils
-fn count_digits(n: Int) -> Int {
-  let assert Ok(digits) = int.digits(n, 10)
-  list.length(digits)
 }
 
 /// Builds a nice error heading from a given parse error.
@@ -430,15 +540,10 @@ fn count_digits(n: Int) -> Int {
 /// "[ E019 ] Error: Empty hierarchy"
 /// ```
 /// 
-fn error_heading(error: ParseError) -> String {
-  string_builder.from_strings([
-    "[ ",
-    to_code(error),
-    " ] Error: ",
-    pretty_name(error),
-  ])
-  |> string_builder.to_string
-  |> ansi.red
+fn error_heading(error: ParseError) -> StringBuilder {
+  ["[ ", to_code(error), " ] Error: ", pretty_name(error)]
+  |> list.map(ansi.red)
+  |> string_builder.from_strings
 }
 
 /// Given a file name and the maximum line to display, builds a file heading.
@@ -451,33 +556,54 @@ fn error_heading(error: ParseError) -> String {
 /// 
 /// ```gleam
 /// > file_heading("foo.pre", 3, 1, 1)
-/// "     ╭─── foo.pre:1:1"
+/// "     ╭─── foo.pre:1:1
+///       │"
 /// ```
-/// 
-fn file_heading(
-  file_name: String,
-  max_line_digits: Int,
-  min_line: Int,
-  starting_line: Int,
-  starting_column: Int,
-) -> String {
-  let padding = string.repeat(" ", max_line_digits + 1)
-  string_builder.from_strings([
-    padding,
-    " ╭",
-    string.repeat("─", error_heading_length - { max_line_digits + 3 }),
-    " ",
-    file_name,
-    ":",
-    int.to_string(starting_line),
-    ":",
-    int.to_string(starting_column),
-    "\n",
-    padding,
-    case min_line {
-      1 -> " │\n"
-      _ -> " ┆\n"
-    },
-  ])
-  |> string_builder.to_string
+///
+pub fn file_heading(
+  error: ParseError,
+  source_file_name: String,
+) -> StringBuilder {
+  let spans = spans(error)
+
+  // Used to display the initial line and column of the error
+  let main_span = main_span(error)
+  let line_start = int.to_string(main_span.line_start)
+  let column_start = int.to_string(main_span.line_end)
+
+  // Compute the left padding needed to correctly align with the line number
+  let max_line_digits = count_digits(span.max_line(spans))
+  let padding = string.repeat(" ", max_line_digits + 2)
+
+  // Compute the number of dashes needed to correctly align the start of the
+  // file name with the end of the error code. This is totally useless and a
+  // grand total of 3 people might notice it but it's really satisfying to me :)
+  let dash_size = error_heading_length - { max_line_digits + 3 }
+  let first_line_dash = string.repeat("─", dash_size)
+  let file_name_with_info =
+    [source_file_name, ":", line_start, ":", column_start]
+    |> string_builder.from_strings
+  let first_line =
+    [padding, "╭", first_line_dash, " "]
+    |> string_builder.from_strings
+    |> string_builder.append_builder(file_name_with_info)
+
+  // The vertical dash connecting the error heading to the error body and
+  // displayed code. If the code doesn't start from line 1 then a dashed line is
+  // used to make it look prettier. Again, maybe 2 people will notice this but
+  // if I didn't do it I'd feel bad!
+  let vertical_dash = case span.min_line(spans) {
+    1 -> "│"
+    _ -> "┆"
+  }
+  let second_line = string_builder.from_strings([padding, vertical_dash])
+
+  [first_line, second_line]
+  |> string_builder.join("\n")
+}
+
+/// TODO: move to int_extra utils
+fn count_digits(n: Int) -> Int {
+  let assert Ok(digits) = int.digits(n, 10)
+  list.length(digits)
 }
