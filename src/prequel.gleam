@@ -1,14 +1,14 @@
+import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
+import gleam/result
+import non_empty_list.{NonEmptyList}
 import prequel/internals/token.{
   Ampersand, ArrowLollipop, CircleLollipop, CloseBracket, CloseParens, Colon,
   Minus, Number, OpenBracket, OpenParens, StarLollipop, Token, Word,
 }
 import prequel/span.{Span}
 import prequel/parse_error.{ParseError}
-import non_empty_list.{NonEmptyList}
-import gleam/result
-import gleam/int
 
 /// A module is the result obtained by parsing a file, it contains a list of
 /// entities and relationships.

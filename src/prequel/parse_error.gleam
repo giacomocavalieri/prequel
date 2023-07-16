@@ -1,17 +1,7 @@
-//// error_heading(error)
-
-import prequel/span.{Span}
 import gleam/option.{None, Option, Some}
-import gleam/string_builder.{StringBuilder}
-import gleam_community/ansi
-import gleam/string
-import gleam/int
-import gleam/list
 import non_empty_list.{NonEmptyList}
-import gleam/pair
-import gleam/bool
-import gleam/result
 import prequel/internals/report
+import prequel/span.{Span}
 
 /// TODO: document these errors and when each one makes sense with a little example
 pub type ParseError {
@@ -197,7 +187,7 @@ pub type ParseError {
 }
 
 /// Given an error, returns its numeric code
-pub fn to_code(error: ParseError) -> String {
+fn to_code(error: ParseError) -> String {
   case error {
     WrongEntityName(_, _, _, _, _) -> "E001"
     MoreThanOneHierarchy(_, _, _, _) -> "E002"
@@ -319,7 +309,7 @@ fn spans(error: ParseError) -> NonEmptyList(Span) {
 /// Returns the span where the error actually starts; that is, the span relative
 /// to the error itself and not the accessory enclosing definition span.
 /// 
-pub fn main_span(error: ParseError) -> Span {
+fn main_span(error: ParseError) -> Span {
   case error {
     WrongEntityName(_, _, _, span, _) -> span
     MoreThanOneHierarchy(_, _, span, _) -> span
@@ -352,7 +342,7 @@ pub fn main_span(error: ParseError) -> Span {
   }
 }
 
-pub fn context_span(error: ParseError) -> Option(Span) {
+fn context_span(error: ParseError) -> Option(Span) {
   case error {
     WrongEntityName(span, _, _, _, _) -> span
     MoreThanOneHierarchy(span, _, _, _) -> Some(span)

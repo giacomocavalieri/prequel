@@ -1,6 +1,6 @@
 import gleam/list
-import gleam/string
 import gleam/pair
+import gleam/string
 
 pub fn chunks_of(string: String, max_size max_size: Int) -> List(String) {
   string.split(string, on: " ")

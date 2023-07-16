@@ -4,12 +4,12 @@ import gleam/list
 import gleam/option.{None}
 import gleam/order
 import gleam/string_builder.{StringBuilder}
+import non_empty_list
 import prequel.{
   Attribute, Bounded, Cardinality, ComposedKey, Disjoint, Entity, Hierarchy, Key,
   Module, Overlapped, Partial, Relationship, RelationshipEntity, SingleKey,
   Total, Unbounded,
 }
-import non_empty_list
 
 pub fn pretty(module: Module) -> String {
   let entities =

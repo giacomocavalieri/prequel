@@ -1,9 +1,9 @@
 import gleam/io
-import prequel
 import gleam/result
-import prequel/pretty_printer
-import prequel/parse_error
 import gleam_community/ansi
+import prequel
+import prequel/parse_error
+import prequel/pretty_printer
 
 pub fn main() {
   let str =

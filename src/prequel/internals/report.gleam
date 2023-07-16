@@ -1,13 +1,13 @@
+import gleam/int
+import gleam/list
+import gleam/option.{None, Option, Some}
+import gleam/string
+import gleam/string_builder.{StringBuilder}
+import gleam_community/ansi
+import non_empty_list.{NonEmptyList}
 import prequel/span.{Span}
 import prequel/internals/int_extra
 import prequel/internals/string_extra
-import gleam/string_builder.{StringBuilder}
-import gleam/list
-import gleam_community/ansi
-import gleam/string
-import gleam/int
-import non_empty_list.{NonEmptyList}
-import gleam/option.{None, Option, Some}
 
 const max_column = 70
 
