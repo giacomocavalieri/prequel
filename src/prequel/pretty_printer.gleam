@@ -100,6 +100,7 @@ fn pretty_attribute(attribute: Attribute, indentation: Int) -> StringBuilder {
     _ -> {
       lollipop
       |> string_builder.append(attribute.name)
+      |> string_builder.append(" : ")
       |> string_builder.append_builder(pretty_cardinality(attribute.cardinality))
     }
   }

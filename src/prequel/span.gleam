@@ -1,6 +1,5 @@
 import gleam/int
 import non_empty_list.{NonEmptyList}
-import gleam/order.{Eq, Gt, Lt, Order}
 
 // TODO: Span could be a single number indicating the nth grapheme in the file
 // I have no idea which one could be better.
@@ -56,12 +55,23 @@ pub fn merge(one: Span, with other: Span) -> Span {
 /// ```
 /// 
 pub fn max_line(spans: NonEmptyList(Span)) -> Int {
-  spans
-  |> non_empty_list.flat_map(fn(span) {
-    non_empty_list.new(span.line_start, [span.line_end])
-  })
-  |> non_empty_list.sort(by: fn(n, m) { inverse_order(int.compare(n, m)) })
-  |> non_empty_list.first
+  non_empty_list.flat_map(spans, lines)
+  |> non_empty_list.reduce(int.max)
+}
+
+/// Returns the smallest line in a non empty list of spans.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > non_empty_list.new(point(14, 1), [segment(2, 4, 5)])
+/// > |> max_column
+/// 5
+/// ```
+/// 
+pub fn max_column(spans: NonEmptyList(Span)) -> Int {
+  non_empty_list.flat_map(spans, columns)
+  |> non_empty_list.reduce(int.max)
 }
 
 /// Returns the smallest line in a non empty list of spans.
@@ -75,18 +85,59 @@ pub fn max_line(spans: NonEmptyList(Span)) -> Int {
 /// ```
 /// 
 pub fn min_line(spans: NonEmptyList(Span)) -> Int {
-  spans
-  |> non_empty_list.flat_map(fn(span) {
-    non_empty_list.new(span.line_start, [span.line_end])
-  })
-  |> non_empty_list.sort(by: int.compare)
-  |> non_empty_list.first
+  non_empty_list.flat_map(spans, lines)
+  |> non_empty_list.reduce(int.min)
 }
 
-fn inverse_order(order: Order) -> Order {
-  case order {
-    Gt -> Lt
-    Eq -> Eq
-    Lt -> Gt
-  }
+/// Returns the smallest column in a non empty list of spans.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > non_empty_list.new(point(14, 1), [segment(2, 4, 5)])
+/// > |> min_column
+/// 1
+/// ```
+/// 
+pub fn min_column(spans: NonEmptyList(Span)) -> Int {
+  non_empty_list.flat_map(spans, columns)
+  |> non_empty_list.reduce(int.min)
+}
+
+/// Returns a non empty list with the starting and ending lines of a span.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > lines(point(11, 1)) |> non_empty_list.to_list
+/// [11]
+/// ```
+/// 
+/// ```gleam
+/// > lines(new(11, 15, 2, 4)) |> non_empty_list.to_list
+/// [11, 15]
+/// ```
+/// 
+pub fn lines(span: Span) -> NonEmptyList(Int) {
+  non_empty_list.new(span.line_start, [span.line_end])
+  |> non_empty_list.unique
+}
+
+/// Returns a non empty list with the starting and ending columns of a span.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > lines(point(11, 1)) |> non_empty_list.to_list
+/// [1]
+/// ```
+/// 
+/// ```gleam
+/// > lines(new(11, 15, 2, 4)) |> non_empty_list.to_list
+/// [2, 4]
+/// ```
+/// 
+pub fn columns(span: Span) -> NonEmptyList(Int) {
+  non_empty_list.new(span.column_start, [span.column_end])
+  |> non_empty_list.unique
 }

@@ -695,6 +695,8 @@ fn do_parse_key(
     // shorthand for attribute definition.
     [#(Word(key), span), #(Colon, _), ..tokens] -> {
       use type_, tokens <- try(parse_attribute_type(tokens))
+      // Here I could try and see if there's a cardinality raise an error,
+      // it depends if it is a common mistake or not
       succeed(SingleKey(span, key, Some(type_)), tokens)
     }
 

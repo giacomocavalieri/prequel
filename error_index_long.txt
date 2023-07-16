@@ -2,9 +2,9 @@
     ╭─── Hello.prequel:1:1
     │
   1 │ entity -o {
-    ┆ ┬───── ──
-    ┆ ╰─ I was expecting to find an entity name after this but I ran into `-o`
-    ┆    which is not a valid name
+    ┆ ────── ┬─
+    ┆        ╰─ I was expecting to find an entity name after the `entity` keyword but I
+    ┆           ran into `-o` which is not a valid name
 
 (a) To define an entity you can ...
 (b) To define a shorthand relationship you can ...
@@ -145,9 +145,9 @@ An entity's body can only contain:
   1 │ entity prova {
     ┆ 
   7 │   -o & : (1-1)
-    ┆   ┬─ ─
-    ┆   ╰─ I was expecting to find an attribute name after this but I ran into
-    ┆      `&` which is not a valid name
+    ┆   ── ┬
+    ┆      ╰─ I was expecting to find an attribute name after this but I ran into
+    ┆         `&` which is not a valid name
 
 
 
@@ -157,9 +157,9 @@ An entity's body can only contain:
   1 │ entity prova {
     ┆
   7 │   -o attribute : foobar
-    ┆                ┬ ──────
-    ┆                ╰─ I was expecting a cardinality annotation after this but
-    ┆                   I ran into `foobar` which is not a valid cardinality
+    ┆                ─ ┬─────
+    ┆                  ╰─ I was expecting a cardinality annotation after this but
+    ┆                     I ran into `foobar` which is not a valid cardinality
 
 
 
