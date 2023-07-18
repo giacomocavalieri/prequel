@@ -319,14 +319,6 @@ fn simple_error_to_string(
 /// It underlines in blue the context piece and underlines in red the pointed
 /// part, displaying a message starting from that point.
 /// 
-/// Possible pain point! This function makes a pretty strong assumption that the
-/// reports should never break in order to get nice looking strings: the pointed
-/// and underlined spans _never_ overlap and the undelined span always comes
-/// before the pointed span. If this assumption is broken the output won't be
-/// coloured correctly! For now I'm sure the compiler will never break this
-/// assumption when generating reports; however, in the future it might become
-/// something to pay attention to.
-/// 
 fn error_with_context_to_string(
   pointed: Span,
   underlined: Span,
@@ -334,6 +326,13 @@ fn error_with_context_to_string(
   code_lines: CodeLines,
   max_line: Int,
 ) -> StringBuilder {
+  // ⚠️ Possible pain point! This function makes a pretty strong assumption that
+  // the reports should never break in order to get nice looking strings: the
+  // pointed and underlined spans _never_ overlap and the undelined span always
+  // comes before the pointed span. If this assumption is broken the output
+  // won't be coloured correctly! For now I'm sure the compiler will never break
+  // this assumption when generating reports; however, in the future it might
+  // become something to pay attention to.
   span.merge(pointed, underlined)
   |> select_lines_range(code_lines, _)
   |> highlight_lines(at: pointed, in: ansi.red)
