@@ -29,8 +29,6 @@ pub type Token {
   ArrowLollipop
   Minus
   Ampersand
-  ModuleComment(content: String)
-  TopLevelComment(content: String)
   SimpleComment(content: String)
   Number(value: String)
   Word(value: String)
@@ -62,8 +60,6 @@ pub fn to_string(token: Token) -> String {
     ArrowLollipop -> "->"
     Minus -> "-"
     Ampersand -> "&"
-    ModuleComment(comment) -> "////" <> comment
-    TopLevelComment(comment) -> "///" <> comment
     SimpleComment(comment) -> "//" <> comment
     Number(number) -> number
     Word(word) -> word
@@ -133,24 +129,10 @@ fn do_scan(
       let lexeme = #(Ampersand, span.point(line, column))
       do_scan(rest, line, column + 1, [lexeme, ..acc])
     }
-    "////" <> rest -> {
-      let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 3)
-      let lexeme = #(ModuleComment(comment_body), span)
-      do_scan(rest, line + 1, 1, [lexeme, ..acc])
-    }
-    "///" <> rest -> {
-      let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 2)
-      let lexeme = #(TopLevelComment(comment_body), span)
-      do_scan(rest, line + 1, 1, [lexeme, ..acc])
-    }
     "//" <> rest -> {
       let #(comment_body, size, rest) =
-        scan_comment_body(string_builder.new(), 0, rest)
-      let span = span.segment(line, column, column + size + 1)
+        scan_comment_body(string_builder.new(), 2, rest)
+      let span = span.segment(line, column, column + size - 1)
       let lexeme = #(SimpleComment(comment_body), span)
       do_scan(rest, line + 1, 1, [lexeme, ..acc])
     }
