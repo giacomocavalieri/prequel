@@ -2,7 +2,6 @@ import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
 import gleam/result
-import gleam_community/ansi
 import non_empty_list.{NonEmptyList}
 import prequel/internals/token.{
   Ampersand, ArrowLollipop, CircleLollipop, CloseBracket, CloseParens, Colon,

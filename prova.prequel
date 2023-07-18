@@ -1,4 +1,4 @@
-entity {
+entity prova {
   -* badge
   -o name
   -o last_name : (1-N)
@@ -12,8 +12,4 @@ entity classroom {
   -* number & letter
   -o nome
   -o letter 
-}
-
-relationship prova {
-    ->
 }

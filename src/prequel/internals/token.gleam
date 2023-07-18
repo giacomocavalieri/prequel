@@ -5,6 +5,19 @@ import prequel/span.{Span}
 
 /// A token of the Prequel language.
 /// 
+/// As you may notice there are no explicit keywords, Prequel is very lenient
+/// about how keywords can be used: a keyword can always be used everywhere
+/// name is expected. For example:
+/// 
+/// ```
+/// entity entity
+/// ```
+/// 
+/// Is a valid entity definition that describes an entity called `entity`
+/// 
+/// This is the reason why there are no explicit keywords among the possible
+/// tokens and the parser deals with just words.
+/// 
 pub type Token {
   OpenBracket
   CloseBracket
@@ -23,6 +36,20 @@ pub type Token {
   Word(value: String)
 }
 
+/// Turns a token into its literal string representation.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > OpenBracket |> to_string
+/// "{"
+/// ```
+/// 
+/// ```gleam
+/// > Number("123") |> to_string
+/// "123"
+/// ```
+/// 
 pub fn to_string(token: Token) -> String {
   case token {
     OpenBracket -> "{"
@@ -157,6 +184,25 @@ fn do_scan(
 /// 
 /// It returns the scanned comment body, its size and the remaining unscanned
 /// source code.
+/// 
+/// 
+/// ## Performance considerations
+/// 
+/// This function, like `scan_number` and `scan_word`, uses a bit of additional
+/// state to avoid some performance pitfalls:
+/// - `size` the size of the scanned comment is weaved throughout the
+///   function calls and returned at the end, a completly reasonable way of
+///   returning the size of the scanned comment would also be to call
+///   `string.length` on the final comment before returning it.
+///   However, `size` needs to traverse the entire built string
+/// - `acc` the built comment, it would also be possible to simply concatenate
+///   the comment's graphemes as you meet them in the recursive calls; using a
+///   `StringBuilder`, however, is more efficient when you need to perform
+///   multiple string concatenations
+/// 
+/// I've made these "optimisations" totally on a hunch and there's no profiling
+/// to back up my intuitions. However, it's such a small code change that I'd
+/// feel bad not implementing it immediately.
 /// 
 fn scan_comment_body(
   acc: StringBuilder,
