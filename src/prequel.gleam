@@ -761,7 +761,7 @@ fn parse_multi_attribute_key(
     [#(Word(key), last_word_span), ..tokens] ->
       first_word_span
       |> span.merge(with: last_word_span)
-      |> ComposedKey(non_empty_list.new(key, keys))
+      |> ComposedKey(non_empty_list.reverse(non_empty_list.new(key, keys)))
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -1059,7 +1059,7 @@ fn parse_hierarchy(
     | [#(Word("disjoint"), overlapping_span), ..] ->
       parse_error.MissingHierarchyKeyword(
         enclosing_entity: entity_span,
-        overlapping_span: overlapping_span,
+        qualifiers_span: span.merge(totality_span, overlapping_span),
         hint: None,
       )
       |> fail
@@ -1163,7 +1163,7 @@ fn parse_relationship(
     // If there is the relationship's name but no `{` reports it as an error
     // since a relationship must always have a body.
     [#(Word(_), name_span), ..] ->
-      parse_error.EmptyRelationshipBody(name_span, None)
+      parse_error.RelationshipBodyWithNoEntities(name_span, None)
       |> fail
 
     [#(token, span), ..] ->
@@ -1230,7 +1230,7 @@ fn do_parse_relationship_body(
           |> fail
 
         [] ->
-          parse_error.EmptyRelationshipBody(relationship_span, None)
+          parse_error.RelationshipBodyWithNoEntities(relationship_span, None)
           |> fail
       }
 

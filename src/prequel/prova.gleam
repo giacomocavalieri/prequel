@@ -8,35 +8,27 @@ import prequel/pretty_printer
 pub fn main() {
   let str =
     "
-entity studente {
-  -* matricola
+entity classroom {
+  -* number & letter
+  
+  -o number 
+  -o letter
+}
 
-  -o nome
-  -o
-     cognome cane
-  -o età
+entity student {
+  -* badge
+  -o first_name
+  -o last_name
 
-  -> in_classe : (1-1) classe (1-30) {
-    -o numero_di_registro
-  }
-
-  total disjoint hierarchy {
-    entity studente_intercultura {
-      -o matricola_estera
-    }
+  -> in_classroom : (1-1) classroom (1-30) {
+    -o seat_number
   }
 }
 
-entity classe {
-  -* numero
-   & sezione
-
-  -o 
-  -o sezione
-
-  -> capoclasse: (0-1) studente (1-1)
+relationship in_classroom {
+  -> prova : (1-1)
 }
-  "
+"
 
   str
   |> prequel.parse
@@ -47,7 +39,7 @@ entity classe {
     |> io.println
   })
   |> result.map_error(fn(error) {
-    parse_error.pretty("in_memory_string", str, error)
+    parse_error.to_pretty_string(error, "foo.prequel", str)
     |> io.println
   })
 }

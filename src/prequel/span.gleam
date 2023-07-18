@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/int
 import non_empty_list.{NonEmptyList}
 
@@ -10,6 +11,8 @@ pub type Span {
   Span(line_start: Int, line_end: Int, column_start: Int, column_end: Int)
 }
 
+/// Creates a new segment given its start and end line and column.
+/// 
 pub fn new(
   line_start: Int,
   line_end: Int,
@@ -140,4 +143,106 @@ pub fn lines(span: Span) -> NonEmptyList(Int) {
 pub fn columns(span: Span) -> NonEmptyList(Int) {
   non_empty_list.new(span.column_start, [span.column_end])
   |> non_empty_list.unique
+}
+
+/// Returns true if the given span is a single-line segment, that is if its
+/// starting and ending line are the same.
+/// 
+/// ## Examples
+/// 
+/// ```gleam 
+/// > is_segment(segment(1, 2, 3))
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > is_segment(point(2, 5))
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > is_segment(new(1, 2, 3, 4))
+/// False
+/// ```
+/// 
+pub fn is_segment(span: Span) -> Bool {
+  span.line_start == span.line_end
+}
+
+/// Returns true if the span starts at the given line.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > point(1, 2) |> starts_at_line(1)
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > point(11, 1) |> starts_at_line(1)
+/// False
+/// ```
+///
+pub fn starts_at_line(span: Span, line: Int) -> Bool {
+  span.line_start == line
+}
+
+/// Returns true if the span ends on the given line.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > point(1, 2) |> ends_on_line(1)
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > point(11, 2) |> ends_on_line(1)
+/// False
+/// ```
+///
+pub fn ends_on_line(span: Span, line: Int) -> Bool {
+  span.line_end == line
+}
+
+/// Returns true if the span contains the given line.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > new(1, 11, 2, 3) |> contains_line(1)
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > new(1, 11, 2, 3) |> contains_line(11)
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > new(1, 11, 2, 3) |> contains_line(10)
+/// True
+/// ```
+/// 
+/// ```gleam
+/// > new(1, 11, 2, 3) |> contains_line(12)
+/// False
+/// ```
+/// 
+pub fn contains_line(span: Span, line: Int) -> Bool {
+  span.line_start <= line && line <= span.line_end
+}
+
+pub type Position {
+  First
+  Inside
+  Last
+  Outside
+}
+
+pub fn classify_line(span: Span, line: Int) -> Position {
+  use <- bool.guard(when: starts_at_line(span, line), return: First)
+  use <- bool.guard(when: ends_on_line(span, line), return: Last)
+  use <- bool.guard(when: contains_line(span, line), return: Inside)
+  Outside
 }

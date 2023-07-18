@@ -10,7 +10,7 @@ description = "A markup language for defining ER schemas"
 # links = [{ title = "Website", href = "https://gleam.run" }]
 
 [dependencies]
-gleam_stdlib = "~> 0.29"
+gleam_stdlib = "~> 0.30"
 non_empty_list = "~> 1.0"
 gleam_community_ansi = "~> 1.1"
 

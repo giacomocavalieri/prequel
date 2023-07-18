@@ -1,11 +1,12 @@
 import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
+import gleam/pair
 import gleam/string
 import gleam/string_builder.{StringBuilder}
 import gleam_community/ansi
 import non_empty_list.{NonEmptyList}
-import prequel/span.{Span}
+import prequel/span.{First, Inside, Last, Outside, Span}
 import prequel/internals/int_extra
 import prequel/internals/string_extra
 
@@ -37,6 +38,7 @@ pub type Report {
     error_line: Int,
     error_column: Int,
     blocks: NonEmptyList(ReportBlock),
+    hint: Option(String),
   )
 }
 
@@ -57,8 +59,11 @@ type PrettyBlock {
   PrettyBlock(content: StringBuilder, line_start: Int, line_end: Int)
 }
 
+type CodeLine =
+  #(Int, String)
+
 type CodeLines =
-  List(#(Int, String))
+  List(CodeLine)
 
 /// Turns a `Report` into a pretty printed string that displays the report.
 /// 
@@ -300,7 +305,12 @@ fn simple_error_to_string(
   code_lines: CodeLines,
   max_line: Int,
 ) -> StringBuilder {
-  todo
+  select_lines_range(code_lines, using: pointed)
+  |> highlight_lines(at: pointed, in: ansi.red)
+  |> list.map(fn(pair) { add_line_number(pair.0, pair.1, max_line) })
+  |> string_builder.join(with: "\n")
+  |> string_builder.append("\n")
+  |> string_builder.append_builder(pointing_message(pointed, comment, max_line))
 }
 
 /// Pretty prints an error block where there is also an underlined piece of
@@ -309,6 +319,14 @@ fn simple_error_to_string(
 /// It underlines in blue the context piece and underlines in red the pointed
 /// part, displaying a message starting from that point.
 /// 
+/// Possible pain point! This function makes a pretty strong assumption that the
+/// reports should never break in order to get nice looking strings: the pointed
+/// and underlined spans _never_ overlap and the undelined span always comes
+/// before the pointed span. If this assumption is broken the output won't be
+/// coloured correctly! For now I'm sure the compiler will never break this
+/// assumption when generating reports; however, in the future it might become
+/// something to pay attention to.
+/// 
 fn error_with_context_to_string(
   pointed: Span,
   underlined: Span,
@@ -316,57 +334,63 @@ fn error_with_context_to_string(
   code_lines: CodeLines,
   max_line: Int,
 ) -> StringBuilder {
-  todo
-}
-
-fn pointed_line(
-  pointed: Span,
-  underlined_on_same_line: List(Span),
-  max_line: Int,
-) -> StringBuilder {
-  case underlined_on_same_line {
-    [] -> todo
-    [first, ..rest] -> {
-      span.max_column(non_empty_list.new(first, rest))
-    }
-  }
-
-  string_builder.new()
-}
-
-fn pretty_pointed(
-  pointed: Span,
-  code_lines: CodeLines,
-  max_line: Int,
-  comment: String,
-) -> StringBuilder {
-  let lines =
-    select_lines_range(from: code_lines, using: pointed)
-    |> list.map(fn(pair) { add_line_number(pair.0, pair.1, max_line) })
-    |> string_builder.join(with: "\n")
-
-  let underline =
-    pointed_underline(
-      pointed.column_start,
-      pointed.column_end,
-      max_line,
-      comment,
-    )
-
-  [lines, underline]
+  span.merge(pointed, underlined)
+  |> select_lines_range(code_lines, _)
+  |> highlight_lines(at: pointed, in: ansi.red)
+  |> highlight_lines(at: underlined, in: ansi.blue)
+  |> list.map(fn(pair) { add_line_number(pair.0, pair.1, max_line) })
   |> string_builder.join(with: "\n")
+  |> string_builder.append("\n")
+  |> string_builder.append_builder(pointing_message(pointed, comment, max_line))
 }
 
-fn pointed_underline(
-  column_start: Int,
-  column_end: Int,
-  max_line: Int,
+/// Highlights the lines and columns included in the span using the given
+/// colouring function.
+/// 
+fn highlight_lines(
+  lines: CodeLines,
+  at span: Span,
+  in colour: fn(String) -> String,
+) -> CodeLines {
+  list.map(lines, highlight_line(_, at: span, in: colour))
+}
+
+/// Highlights the piece of the given line that is inside the span.
+/// 
+fn highlight_line(
+  line: CodeLine,
+  at span: Span,
+  in colour: fn(String) -> String,
+) -> CodeLine {
+  let #(line_number, line) = line
+  let from = span.column_start
+  let to = span.column_end
+  case span.is_segment(span) && span.contains_line(span, line_number) {
+    True -> string_extra.highlight_from_to(line, from, to, colour)
+    False ->
+      case span.classify_line(span, line_number) {
+        First -> string_extra.highlight_from(line, from, colour)
+        Last -> string_extra.highlight_up_to(line, to, colour)
+        Inside -> colour(line)
+        Outside -> line
+      }
+  }
+  |> pair.new(line_number, _)
+}
+
+// TODO: refactor this
+fn pointing_message(
+  pointed: Span,
   comment: String,
+  max_line: Int,
 ) -> StringBuilder {
-  let underline_size = column_end - column_start + 1
+  let start = pointed.column_start
+  let end = pointed.column_end
+
+  let underline_size = end - start + 1
   let underline =
     [
-      string.repeat(" ", column_start - 1),
+      string.repeat(" ", start - 1),
       ansi.red(pointy_underline),
       ansi.red(string.repeat(horizontal_line, underline_size - 1)),
     ]
@@ -378,10 +402,11 @@ fn pointed_underline(
     |> string_builder.from_strings
 
   let first_line = string_builder.join([prefix, underline], with: "")
-  [first_line, pointed_message(comment, column_start, max_line)]
+  [first_line, pointed_message(comment, start, max_line)]
   |> string_builder.join(with: "\n")
 }
 
+// TODO: refactor this
 fn pointed_message(
   message: String,
   column_start: Int,
