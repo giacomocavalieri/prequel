@@ -2,16 +2,21 @@ import gleam/bool
 import gleam/int
 import non_empty_list.{NonEmptyList}
 
-// TODO: Span could be a single number indicating the nth grapheme in the file
-// I have no idea which one could be better.
-
 /// A span indicating a slice of a source code file.
 /// 
 pub type Span {
   Span(line_start: Int, line_end: Int, column_start: Int, column_end: Int)
 }
 
-/// Creates a new segment given its start and end line and column.
+/// Creates a new span given its start line, end line, start column and end
+/// column.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > new(1, 2, 3, 4)
+/// Span(1, 2, 3, 4)
+/// ```
 /// 
 pub fn new(
   line_start: Int,
@@ -24,19 +29,44 @@ pub fn new(
 
 /// Creates a span taht spans over a single line and multiple columns.
 /// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > segment(1, 2 ,5)
+/// Span(1, 1, 2, 5)
+/// ```
+/// 
 pub fn segment(line: Int, column_start: Int, column_end: Int) -> Span {
   Span(line, line, column_start, column_end)
 }
 
-/// Creates a span that spans a single line and column.
+/// Creates a span that spans over a single line and a single column.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > point(1, 2)
+/// Span(1, 1, 2, 2)
+/// ```
 /// 
 pub fn point(line: Int, column: Int) -> Span {
   Span(line, line, column, column)
 }
 
-/// Merge two spans together obtaining the largest possible span:
-/// it starts from the smallest line and column and ends at the largest line
-/// and column.
+/// Merge two spans together obtaining the largest possible span: it starts from
+/// the smallest line and column and ends at the largest line and column.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > point(1, 2) |> merge(point(3, 1))
+/// Span(1, 3, 1, 2)
+/// ```
+/// 
+/// ```gleam
+/// > new(1, 4, 3, 4) |> merge(new(3, 5, 2, 3))
+/// Span(1, 5, 2, 4)
+/// ```
 /// 
 pub fn merge(one: Span, with other: Span) -> Span {
   Span(
@@ -205,7 +235,7 @@ pub fn ends_on_line(span: Span, line: Int) -> Bool {
   span.line_end == line
 }
 
-/// Returns true if the span contains the given line.
+/// Returns true if the given line is contained inside the span.
 /// 
 /// ## Examples
 /// 
@@ -233,6 +263,12 @@ pub fn contains_line(span: Span, line: Int) -> Bool {
   span.line_start <= line && line <= span.line_end
 }
 
+/// The position of a line (or column) relative to a span: it could either be
+/// its first or last line, it could be inside the span, or it could be outside
+/// of it.
+/// 
+/// You can look at the `classify_line` for an example usage of this type.
+/// 
 pub type Position {
   First
   Inside
@@ -240,6 +276,35 @@ pub type Position {
   Outside
 }
 
+/// Returns the position of a line relative to the given span:
+/// - `First` means that the given line is the first line of the span
+/// - `Last` means that the given line is the last line of the span
+/// - `Inside` means that the line falls between the first and last lines of the
+///   span
+/// - `Outside` is for a line that is not contained inside the span
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// > classify_line(new(1, 3, 2, 2), 1)
+/// First
+/// ```
+/// 
+/// ```gleam
+/// > classify_line(new(1, 3, 2, 2), 2)
+/// Inside
+/// ```
+/// 
+/// ```gleam
+/// > classify_line(new(1, 3, 2, 2), 3)
+/// Last
+/// ```
+/// 
+/// ```gleam
+/// > classify_line(new(1, 3, 2, 2), 4)
+/// Outside
+/// ```
+/// 
 pub fn classify_line(span: Span, line: Int) -> Position {
   use <- bool.guard(when: starts_at_line(span, line), return: First)
   use <- bool.guard(when: ends_on_line(span, line), return: Last)
