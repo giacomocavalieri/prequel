@@ -20,20 +20,21 @@ pub fn count_digits(n: Int) -> Int {
   list.length(digits)
 }
 
-/// Returns true if the first number comes before the other.
+/// Returns true if the first number comes immediately before or after the
+/// other.
 /// 
 /// ## Examples
 /// 
 /// ```gleam
-/// > 1 |> comes_before(2)
+/// > 1 |> is_next_to(2)
 /// True
 /// ```
 /// 
 /// ```gleam
-/// > 1 |> comes_before(11)
+/// > 1 |> is_next_to(11)
 /// False
 /// ```
 /// 
-pub fn comes_before(n: Int, m: Int) -> Bool {
-  n + 1 == m
+pub fn is_next_to(n: Int, m: Int) -> Bool {
+  n + 1 == m || n - 1 == m
 }

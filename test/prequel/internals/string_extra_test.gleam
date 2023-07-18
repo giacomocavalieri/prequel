@@ -1,7 +1,7 @@
 import gleeunit/should
 import prequel/internals/string_extra
 
-pub fn split_at_test() {
+pub fn split_at_test() -> Nil {
   "hello"
   |> string_extra.split_at(0)
   |> should.equal(#("h", "ello"))
@@ -27,7 +27,7 @@ pub fn split_at_test() {
   |> should.equal(#("hello", ""))
 }
 
-pub fn chunks_of_test() {
+pub fn chunks_of_test() -> Nil {
   "hello, how are you?"
   |> string_extra.chunks_of(max_size: 10)
   |> should.equal(["hello, how", "are you?"])

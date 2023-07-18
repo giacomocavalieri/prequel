@@ -214,7 +214,7 @@ fn join_two_pretty_blocks(
   max_line: Int,
 ) -> PrettyBlock {
   let joined =
-    case int_extra.comes_before(one.line_end, other.line_start) {
+    case int_extra.is_next_to(one.line_end, other.line_start) {
       True -> [one.content, other.content]
       False -> [one.content, dashed_separator(max_line), other.content]
     }
