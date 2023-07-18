@@ -2,6 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
 import gleam/result
+import gleam_community/ansi
 import non_empty_list.{NonEmptyList}
 import prequel/internals/token.{
   Ampersand, ArrowLollipop, CircleLollipop, CloseBracket, CloseParens, Colon,
@@ -219,6 +220,7 @@ fn parse_entity(
         before_wrong_name: entity_keyword_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
+        after_what: "the `entity` keyword",
         hint: None,
       )
       |> fail
@@ -292,8 +294,7 @@ fn do_parse_entity_body(
       )
     }
 
-    // If a `-*` is found, switches into key parsing. TODO REWORK THIS ONCE THE
-    // AST IS CHANGED TO TAKE INTO ACCOUNT SHORTHAND KEYS
+    // If a `-*` is found, switches into key parsing.
     [#(StarLollipop, lollipop_span), ..tokens] -> {
       use key, tokens <- try(parse_key(tokens, entity_span, lollipop_span))
       do_parse_entity_body(
@@ -861,6 +862,7 @@ fn parse_inner_relationship(
             before_wrong_name: option.unwrap(one_cardinality.span, colon_span),
             wrong_name: token.to_string(token),
             wrong_name_span: span,
+            after_what: "the first cardinality annotation",
             hint: None,
           )
           |> fail
@@ -1349,6 +1351,7 @@ fn parse_relationship_entity(
         before_wrong_name: lollipop_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
+        after_what: "the `->` lollipop",
         hint: None,
       )
       |> fail

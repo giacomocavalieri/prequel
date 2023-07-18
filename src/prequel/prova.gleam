@@ -1,45 +1,21 @@
 import gleam/io
 import gleam/result
-import gleam_community/ansi
 import prequel
 import prequel/parse_error
 import prequel/pretty_printer
+import simplifile
 
 pub fn main() {
-  let str =
-    "
-entity classroom {
-  -* number & letter
-  
-  -o number 
-  -o letter
-}
+  let file_name = "prova.prequel"
+  let assert Ok(source_code) = simplifile.read(file_name)
 
-entity student {
-  -* badge
-  -o first_name
-  -o last_name
-
-  -> in_classroom : (1-1) classroom (1-30) {
-    -o seat_number
-  }
-}
-
-relationship in_classroom {
-  -> prova : (1-1)
-}
-"
-
-  str
-  |> prequel.parse
+  prequel.parse(source_code)
   |> result.map(fn(module) {
-    ansi.green("Pretty printed module\n")
-    |> io.println
     pretty_printer.pretty(module)
     |> io.println
   })
   |> result.map_error(fn(error) {
-    parse_error.to_pretty_string(error, "foo.prequel", str)
+    parse_error.to_pretty_string(error, file_name, source_code)
     |> io.println
   })
 }

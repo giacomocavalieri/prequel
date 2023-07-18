@@ -1,7 +1,5 @@
 import gleeunit/should
-import gleam_community/ansi
 import prequel/internals/string_extra
-import gleam/io
 
 pub fn split_at_test() {
   "hello"

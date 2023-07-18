@@ -2,7 +2,6 @@ import gleam/bool
 import gleam/int
 import gleam/list
 import gleam/option.{None}
-import gleam/order
 import gleam/string_builder.{StringBuilder}
 import non_empty_list
 import prequel.{
@@ -57,14 +56,6 @@ fn pretty_entity_body(entity: Entity, indentation: Int) -> StringBuilder {
     |> string_builder.join("\n")
   let inner_relationships =
     entity.inner_relationships
-    // Put those with no body first
-    |> list.sort(fn(one, other) {
-      case one.attributes, other.attributes {
-        [_, ..], [] -> order.Gt
-        [], [_, ..] -> order.Lt
-        _, _ -> order.Eq
-      }
-    })
     |> list.map(pretty_inner_relationship(_, entity.name, indentation))
     |> string_builder.join("\n")
   let hierarchy =
@@ -175,16 +166,6 @@ fn pretty_hierarchy(hierarchy: Hierarchy, indentation: Int) -> StringBuilder {
   let entities =
     hierarchy.children
     |> non_empty_list.to_list
-    // Put those with an empty body first 
-    // TODO separate those with an empty body and no comment with a single newline
-    // and not an empty line in between
-    |> list.sort(fn(one, other) {
-      case entity_has_empty_body(one), entity_has_empty_body(other) {
-        False, True -> order.Gt
-        True, False -> order.Lt
-        _, _ -> order.Eq
-      }
-    })
     |> list.map(pretty_entity(_, indentation + 2))
     |> string_builder.join("\n\n")
 

@@ -10,6 +10,7 @@ pub type ParseError {
     before_wrong_name: Span,
     wrong_name: String,
     wrong_name_span: Span,
+    after_what: String,
     hint: Option(String),
   )
 
@@ -213,7 +214,7 @@ fn to_report(
 /// Given an error, returns its code identifier
 fn code(of error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, _, _, _) -> "E001"
+    WrongEntityName(_, _, _, _, _, _) -> "E001"
     MoreThanOneHierarchy(_, _, _, _) -> "E002"
     PossibleCircleLollipopTypo(_, _, _) -> "E003"
     PossibleStarLollipopTypo(_, _, _) -> "E004"
@@ -247,7 +248,7 @@ fn code(of error: ParseError) -> String {
 /// Given an error, returns its name
 fn name(of error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, _, _, _) -> "Wrong entity name"
+    WrongEntityName(_, _, _, _, _, _) -> "Wrong entity name"
     MoreThanOneHierarchy(_, _, _, _) -> "More than one hierarchy"
     PossibleCircleLollipopTypo(_, _, _) -> "Circle lollipop typo"
     PossibleStarLollipopTypo(_, _, _) -> "Star lollipop typo"
@@ -289,7 +290,7 @@ fn name(of error: ParseError) -> String {
 /// 
 fn main_span(error: ParseError) -> Span {
   case error {
-    WrongEntityName(_, _, _, span, _) -> span
+    WrongEntityName(_, _, _, span, _, _) -> span
     MoreThanOneHierarchy(_, _, span, _) -> span
     PossibleCircleLollipopTypo(_, span, _) -> span
     PossibleStarLollipopTypo(_, span, _) -> span
@@ -322,12 +323,12 @@ fn main_span(error: ParseError) -> Span {
 
 fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
   case error {
-    WrongEntityName(Some(context), underlined, _, pointed, _) ->
+    WrongEntityName(Some(context), underlined, _, pointed, _, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(pointed, Some(underlined), message(error))],
       )
-    WrongEntityName(None, underlined, _, pointed, _) ->
+    WrongEntityName(None, underlined, _, pointed, _, _) ->
       non_empty_list.single(ErrorBlock(
         pointed,
         Some(underlined),
@@ -473,8 +474,8 @@ fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
 
 fn message(error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, wrong_name, _, _) ->
-      "I was expecting to find an entity name but I ran into `" <> wrong_name <> "`, which is not a valid name"
+    WrongEntityName(_, _, wrong_name, _, after_what, _) ->
+      "I was expecting to find an entity name after " <> after_what <> " but I ran into `" <> wrong_name <> "`, which is not a valid name"
     MoreThanOneHierarchy(_, _, _, _) -> "todo"
     PossibleCircleLollipopTypo(_, _, _) -> "Did you mean to write `-o` here?"
     PossibleStarLollipopTypo(_, _, _) -> "Did you mean to write `-*` here?"
