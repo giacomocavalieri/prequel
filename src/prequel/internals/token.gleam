@@ -230,7 +230,7 @@ fn scan_comment_body(
 
 /// A tail recursive function that scans a number.
 /// It has as additional state a string builder with the number scanned so far
-/// and the its size (in terms if number of digits).
+/// and its size (in terms of number of digits).
 /// 
 /// It returns the scanned number, its size and the remaining unscanned source
 /// code.
@@ -258,9 +258,10 @@ fn scan_number(
 /// A tail recursive function that scans a word (any sequence of graphemes with
 /// an exception for parentheses, colons, whitespaces and comments).
 /// It has as additional state a string builder with the word scanned so far
-/// and the its size (in terms if number of digits).
+/// and its size (in terms of number of graphemes it's made of).
 /// 
-/// It returns the scanned word, its size and the remaining unscanned source code.
+/// It returns the scanned word, its size and the remaining unscanned source
+/// code.
 /// 
 fn scan_word(
   acc: StringBuilder,
