@@ -1,5 +1,5 @@
 import gleeunit/should
-import prequel/internals/int_extra
+import prequel/internals/extra/int as int_extra
 
 pub fn count_digits_test() -> Nil {
   int_extra.count_digits(0)

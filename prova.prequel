@@ -1,15 +1,14 @@
 entity prova {
-  -* badge
-  -o name
-  -o last_name : (1-N)
+  -* key1
 
-  -> in_classroom : (1-1) classroom (0-N) {
-    -o seat_number
+  -o attr1
+  -o attr2
+
+  total disjoint hierarchy {
+    entity subentity
   }
-}
 
-entity classroom {
-  -* number & letter
-  -o nome
-  -o letter 
+  total disjoint hierarchy {
+    entity subentity
+  }
 }

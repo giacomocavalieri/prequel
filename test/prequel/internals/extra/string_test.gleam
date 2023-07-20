@@ -1,5 +1,5 @@
 import gleeunit/should
-import prequel/internals/string_extra
+import prequel/internals/extra/string as string_extra
 
 pub fn split_at_test() -> Nil {
   "hello"

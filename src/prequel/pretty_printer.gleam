@@ -4,7 +4,7 @@ import gleam/list
 import gleam/option.{None}
 import gleam/string_builder.{StringBuilder}
 import non_empty_list
-import prequel.{
+import prequel/ast.{
   Attribute, Bounded, Cardinality, ComposedKey, Disjoint, Entity, Hierarchy, Key,
   Module, Overlapped, Partial, Relationship, RelationshipEntity, SingleKey,
   Total, Unbounded,
@@ -28,9 +28,10 @@ pub fn pretty(module: Module) -> String {
 }
 
 fn entity_has_empty_body(entity: Entity) -> Bool {
-  case entity.attributes, entity.inner_relationships, entity.children {
-    [], [], None -> True
-    _, _, _ -> False
+  let Entity(_, _, keys, attributes, inner_relationships, children) = entity
+  case keys, attributes, inner_relationships, children {
+    [], [], [], None -> True
+    _, _, _, _ -> False
   }
 }
 

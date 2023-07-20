@@ -211,7 +211,8 @@ fn to_report(
   Report(file_name, source_code, name, code, start, end, blocks, hint)
 }
 
-/// Given an error, returns its code identifier
+/// Given an error, returns its code identifier.
+/// 
 fn code(of error: ParseError) -> String {
   case error {
     WrongEntityName(_, _, _, _, _, _) -> "E001"
@@ -245,7 +246,8 @@ fn code(of error: ParseError) -> String {
   }
 }
 
-/// Given an error, returns its name
+/// Given an error, returns its name.
+/// 
 fn name(of error: ParseError) -> String {
   case error {
     WrongEntityName(_, _, _, _, _, _) -> "Wrong entity name"
@@ -337,7 +339,14 @@ fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
     MoreThanOneHierarchy(context, first, second, _) ->
       non_empty_list.new(
         ContextBlock(context),
-        [ErrorBlock(first, None, "a"), ErrorBlock(second, None, "b")],
+        [
+          ErrorBlock(first, None, message(error)),
+          ErrorBlock(
+            second,
+            None,
+            "...and here's another one. Maybe you could merge those together?",
+          ),
+        ],
       )
     PossibleCircleLollipopTypo(context, span, _) ->
       non_empty_list.new(
@@ -476,7 +485,8 @@ fn message(error: ParseError) -> String {
   case error {
     WrongEntityName(_, _, wrong_name, _, after_what, _) ->
       "I was expecting to find an entity name after " <> after_what <> " but I ran into `" <> wrong_name <> "`, which is not a valid name"
-    MoreThanOneHierarchy(_, _, _, _) -> "todo"
+    MoreThanOneHierarchy(_, _, _, _) ->
+      "An entity can only be the root of one hierarchy. Here is the first one..."
     PossibleCircleLollipopTypo(_, _, _) -> "Did you mean to write `-o` here?"
     PossibleStarLollipopTypo(_, _, _) -> "Did you mean to write `-*` here?"
     PossibleArrowLollipopTypo(_, _, _) -> "Did you mean to write `->` here?"
