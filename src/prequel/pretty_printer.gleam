@@ -72,7 +72,7 @@ fn pretty_entity_body(entity: Entity, indentation: Int) -> StringBuilder {
 
 fn pretty_key(key: Key, indentation: Int) -> StringBuilder {
   case key {
-    SingleKey(_, key, type_) ->
+    SingleKey(_, key, _type) ->
       indent_string("-* ", indentation)
       |> string_builder.append(key)
     // TODO pretty type
