@@ -5,7 +5,7 @@ import non_empty_list.{NonEmptyList}
 /// A span indicating a slice of a source code file.
 /// 
 pub type Span {
-  Span(line_start: Int, line_end: Int, column_start: Int, column_end: Int)
+  Span(start_line: Int, end_line: Int, start_column: Int, end_column: Int)
 }
 
 /// Creates a new span given its start line, end line, start column and end
@@ -19,12 +19,12 @@ pub type Span {
 /// ```
 /// 
 pub fn new(
-  line_start: Int,
-  line_end: Int,
-  column_start: Int,
-  column_end: Int,
+  start_line: Int,
+  end_line: Int,
+  start_column: Int,
+  end_column: Int,
 ) -> Span {
-  Span(line_start, line_end, column_start, column_end)
+  Span(start_line, end_line, start_column, end_column)
 }
 
 /// Creates a span taht spans over a single line and multiple columns.
@@ -36,8 +36,8 @@ pub fn new(
 /// Span(1, 1, 2, 5)
 /// ```
 /// 
-pub fn segment(line: Int, column_start: Int, column_end: Int) -> Span {
-  Span(line, line, column_start, column_end)
+pub fn segment(line: Int, start_column: Int, end_column: Int) -> Span {
+  Span(line, line, start_column, end_column)
 }
 
 /// Creates a span that spans over a single line and a single column.
@@ -70,10 +70,10 @@ pub fn point(line: Int, column: Int) -> Span {
 /// 
 pub fn merge(one: Span, with other: Span) -> Span {
   Span(
-    int.min(one.line_start, other.line_start),
-    int.max(one.line_end, other.line_end),
-    int.min(one.column_start, other.column_start),
-    int.max(one.column_end, other.column_end),
+    int.min(one.start_line, other.start_line),
+    int.max(one.end_line, other.end_line),
+    int.min(one.start_column, other.start_column),
+    int.max(one.end_column, other.end_column),
   )
 }
 
@@ -152,7 +152,7 @@ pub fn min_column(spans: NonEmptyList(Span)) -> Int {
 /// ```
 /// 
 pub fn lines(span: Span) -> NonEmptyList(Int) {
-  non_empty_list.new(span.line_start, [span.line_end])
+  non_empty_list.new(span.start_line, [span.end_line])
   |> non_empty_list.unique
 }
 
@@ -171,7 +171,7 @@ pub fn lines(span: Span) -> NonEmptyList(Int) {
 /// ```
 /// 
 pub fn columns(span: Span) -> NonEmptyList(Int) {
-  non_empty_list.new(span.column_start, [span.column_end])
+  non_empty_list.new(span.start_column, [span.end_column])
   |> non_empty_list.unique
 }
 
@@ -196,7 +196,7 @@ pub fn columns(span: Span) -> NonEmptyList(Int) {
 /// ```
 /// 
 pub fn is_segment(span: Span) -> Bool {
-  span.line_start == span.line_end
+  span.start_line == span.end_line
 }
 
 /// Returns true if the span starts at the given line.
@@ -214,7 +214,7 @@ pub fn is_segment(span: Span) -> Bool {
 /// ```
 ///
 pub fn starts_at_line(span: Span, line: Int) -> Bool {
-  span.line_start == line
+  span.start_line == line
 }
 
 /// Returns true if the span ends on the given line.
@@ -232,7 +232,7 @@ pub fn starts_at_line(span: Span, line: Int) -> Bool {
 /// ```
 ///
 pub fn ends_on_line(span: Span, line: Int) -> Bool {
-  span.line_end == line
+  span.end_line == line
 }
 
 /// Returns true if the given line is contained inside the span.
@@ -260,7 +260,7 @@ pub fn ends_on_line(span: Span, line: Int) -> Bool {
 /// ```
 /// 
 pub fn contains_line(span: Span, line: Int) -> Bool {
-  span.line_start <= line && line <= span.line_end
+  span.start_line <= line && line <= span.end_line
 }
 
 /// The position of a line (or column) relative to a span: it could either be

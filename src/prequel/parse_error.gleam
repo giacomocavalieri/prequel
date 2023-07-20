@@ -201,8 +201,8 @@ fn to_report(
   source_code: String,
 ) -> Report {
   let main_span = main_span(error)
-  let start = main_span.line_start
-  let end = main_span.line_end
+  let start = main_span.start_line
+  let end = main_span.end_line
   let name = name(of: error)
   let code = code(of: error)
   let blocks = blocks(of: error)

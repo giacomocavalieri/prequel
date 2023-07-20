@@ -362,8 +362,8 @@ fn highlight_line(
   in colour: fn(String) -> String,
 ) -> CodeLine {
   let #(line_number, line) = line
-  let from = span.column_start
-  let to = span.column_end
+  let from = span.start_column
+  let to = span.end_column
   case span.is_segment(span) && span.contains_line(span, line_number) {
     True -> string_extra.highlight_from_to(line, from, to, colour)
     False ->
@@ -383,8 +383,8 @@ fn pointing_message(
   comment: String,
   max_line: Int,
 ) -> StringBuilder {
-  let start = pointed.column_start
-  let end = pointed.column_end
+  let start = pointed.start_column
+  let end = pointed.end_column
 
   let underline_size = end - start + 1
   let underline =
@@ -547,8 +547,8 @@ fn block_to_spans(block: ReportBlock) -> NonEmptyList(Span) {
 
 fn select_lines_range(from code_lines: CodeLines, using span: Span) -> CodeLines {
   code_lines
-  |> list.drop(span.line_start - 1)
-  |> list.take(span.line_end - span.line_start + 1)
+  |> list.drop(span.start_line - 1)
+  |> list.take(span.end_line - span.start_line + 1)
 }
 
 fn block_start_line(block: ReportBlock) -> Int {
