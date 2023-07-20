@@ -83,6 +83,7 @@ pub fn to_string(report: Report) -> String {
     ),
     connection_from_file_heading_to_blocks(min_line, max_line),
     blocks_to_string_builder(report.source_code, report.blocks, max_line),
+    hint_to_string_builder(report.hint),
   ]
   |> string_builder.join("\n")
   |> string_builder.to_string
@@ -557,4 +558,11 @@ fn block_start_line(block: ReportBlock) -> Int {
 
 fn block_end_line(block: ReportBlock) -> Int {
   max_line(non_empty_list.single(block))
+}
+
+fn hint_to_string_builder(hint: Option(String)) -> StringBuilder {
+  case hint {
+    None -> string_builder.new()
+    Some(hint) -> string_builder.from_strings(["\n", hint])
+  }
 }

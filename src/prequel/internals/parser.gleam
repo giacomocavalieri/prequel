@@ -41,7 +41,10 @@ pub fn parse(
     }
 
     [#(_, span), ..] ->
-      parse_error.UnexpectedTokenInTopLevel(token_span: span, hint: None)
+      parse_error.UnexpectedTokenInTopLevel(
+        token_span: span,
+        hint: Some("TODO: add hint"),
+      )
       |> fail
   }
 }
@@ -93,7 +96,7 @@ fn parse_entity(
         wrong_name: token.to_string(token),
         wrong_name_span: span,
         after_what: "the `entity` keyword",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -102,7 +105,7 @@ fn parse_entity(
         enclosing_definition: None,
         context_span: entity_keyword_span,
         context: "this entity",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -204,10 +207,10 @@ fn do_parse_entity_body(
     | [#(Word("partial" as totality_string), totality_span), ..tokens] -> {
       let error =
         parse_error.InternalError(
-          Some(entity_span),
-          totality_span,
-          "A call to `totality_from_string` failed despite this being assumed a correct totality",
-          None,
+          enclosing_definition: Some(entity_span),
+          context_span: totality_span,
+          context: "A call to `totality_from_string` failed despite this being assumed a correct totality",
+          hint: Some("TODO: add hint"),
         )
 
       let result =
@@ -237,7 +240,7 @@ fn do_parse_entity_body(
       parse_error.PossibleCircleLollipopTypo(
         enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, o_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -245,7 +248,7 @@ fn do_parse_entity_body(
       parse_error.PossibleStarLollipopTypo(
         enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, star_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -253,7 +256,7 @@ fn do_parse_entity_body(
       parse_error.PossibleArrowLollipopTypo(
         enclosing_definition: entity_span,
         typo_span: span.merge(minus_span, arrow_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -268,7 +271,7 @@ fn do_parse_entity_body(
         qualifiers_span: span.merge(first_span, second_span),
         first_qualifier: first,
         second_qualifier: second,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -278,7 +281,7 @@ fn do_parse_entity_body(
       parse_error.UnqualifiedHierarchy(
         enclosing_entity: entity_span,
         hierarchy_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -286,7 +289,7 @@ fn do_parse_entity_body(
       parse_error.UnexpectedTokenInEntityBody(
         enclosing_entity: entity_span,
         token_span: token_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -295,7 +298,7 @@ fn do_parse_entity_body(
         enclosing_definition: None,
         context_span: entity_span,
         context: "the body of this entity",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -357,7 +360,7 @@ fn parse_attribute(
         lollipop_span: lollipop_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -366,7 +369,7 @@ fn parse_attribute(
         enclosing_definition: Some(enclosing_span),
         context_span: lollipop_span,
         context: "this attribute",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -457,7 +460,7 @@ fn parse_cardinality(
       parse_error.WrongLetterInUnboundedCardinality(
         enclosing_definition: enclosing_span,
         wrong_letter_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -468,7 +471,7 @@ fn parse_cardinality(
         enclosing_definition: enclosing_span,
         cardinality_span: span.merge(start, end),
         missing: "a closed parentheses",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -478,7 +481,7 @@ fn parse_cardinality(
         enclosing_definition: enclosing_span,
         cardinality_span: span.merge(start, end),
         missing: "an upper bound",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -488,7 +491,7 @@ fn parse_cardinality(
         enclosing_definition: enclosing_span,
         cardinality_span: span.merge(start, end),
         missing: "an upper bound",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -498,7 +501,7 @@ fn parse_cardinality(
         enclosing_definition: enclosing_span,
         cardinality_span: span,
         missing: "a lower bound",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -510,7 +513,7 @@ fn parse_cardinality(
         enclosing_definition: enclosing_span,
         cardinality_span: span,
         missing: "an open parentheses",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -526,7 +529,7 @@ fn parse_cardinality(
         before_wrong_cardinality: preceding_span,
         wrong_cardinality: token.to_string(token),
         wrong_cardinality_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -535,7 +538,7 @@ fn parse_cardinality(
         enclosing_definition: Some(enclosing_span),
         context_span: preceding_span,
         context: "the cardinality of this element",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -551,7 +554,7 @@ fn parse_number(
     enclosing_definition: Some(enclosing_span),
     context_span: raw_number_span,
     context: "This was assumed to be a number",
-    hint: None,
+    hint: Some("TODO: add hint"),
   ))
 }
 
@@ -604,7 +607,7 @@ fn do_parse_key(
         lollipop_span: lollipop_span,
         wrong_key: token.to_string(token),
         wrong_key_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -613,7 +616,7 @@ fn do_parse_key(
         enclosing_definition: Some(entity_span),
         context_span: lollipop_span,
         context: "this key",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -646,7 +649,7 @@ fn parse_multi_attribute_key(
         enclosing_entity: entity_span,
         keywords_span: span.merge(first_word_span, last_word_span),
         colon_span: colon_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -662,7 +665,7 @@ fn parse_multi_attribute_key(
         lollipop_span: lollipop_span,
         wrong_key: token.to_string(token),
         wrong_key_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -671,7 +674,7 @@ fn parse_multi_attribute_key(
         enclosing_definition: Some(entity_span),
         context_span: lollipop_span,
         context: "this key",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -754,7 +757,7 @@ fn parse_inner_relationship(
             wrong_name: token.to_string(token),
             wrong_name_span: span,
             after_what: "the first cardinality annotation",
-            hint: None,
+            hint: Some("TODO: add hint"),
           )
           |> fail
 
@@ -763,7 +766,7 @@ fn parse_inner_relationship(
             enclosing_definition: Some(entity_span),
             context_span: lollipop_span,
             context: "this relationship",
-            hint: None,
+            hint: Some("TODO: add hint"),
           )
           |> fail
       }
@@ -775,7 +778,7 @@ fn parse_inner_relationship(
       parse_error.MissingCardinalityAnnotation(
         enclosing_definition: entity_span,
         before_span: name_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -785,7 +788,7 @@ fn parse_inner_relationship(
         before_wrong_name: lollipop_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -794,7 +797,7 @@ fn parse_inner_relationship(
         enclosing_definition: Some(entity_span),
         context_span: lollipop_span,
         context: "this relationship",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -843,7 +846,7 @@ fn do_parse_inner_relationship_body(
       parse_error.KeyInsideRelationship(
         enclosing_relationship: relationship_span,
         lollipop_span: lollipop_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -853,7 +856,7 @@ fn do_parse_inner_relationship_body(
       parse_error.PossibleCircleLollipopTypo(
         enclosing_definition: relationship_span,
         typo_span: span.merge(minus_span, o_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -861,7 +864,7 @@ fn do_parse_inner_relationship_body(
       parse_error.UnexpectedTokenInBinaryRelationship(
         enclosing_relationship: relationship_span,
         token_span: token_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -870,7 +873,7 @@ fn do_parse_inner_relationship_body(
         enclosing_definition: Some(entity_span),
         context_span: relationship_span,
         context: "the body of this relationship",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -902,10 +905,10 @@ fn parse_hierarchy(
     ] -> {
       let error =
         parse_error.InternalError(
-          Some(entity_span),
-          word_span,
-          "A call to `overlapping_from_string` failed despite this being assumed a correct overlapping",
-          None,
+          enclosing_definition: Some(entity_span),
+          context_span: word_span,
+          context: "A call to `overlapping_from_string` failed despite this being assumed a correct overlapping",
+          hint: Some("TODO: add hint"),
         )
       let result = result.replace_error(overlapping_from_string(word), error)
       use overlapping <- result.try(result)
@@ -919,7 +922,7 @@ fn parse_hierarchy(
             enclosing_entity: entity_span,
             first_hierarchy_span: first_hierarchy.span,
             other_hierarchy_span: hierarchy_span,
-            hint: None,
+            hint: Some("TODO: add hint"),
           )
           |> fail
 
@@ -942,7 +945,7 @@ fn parse_hierarchy(
       parse_error.EmptyHierarchy(
         enclosing_entity: entity_span,
         hierarchy_span: span.merge(totality_span, hierarchy_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -953,7 +956,7 @@ fn parse_hierarchy(
       parse_error.MissingHierarchyKeyword(
         enclosing_entity: entity_span,
         qualifiers_span: span.merge(totality_span, overlapping_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -963,7 +966,7 @@ fn parse_hierarchy(
         before_wrong_overlapping: totality_span,
         wrong_overlapping: token.to_string(token),
         wrong_overlapping_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -972,7 +975,7 @@ fn parse_hierarchy(
         enclosing_definition: Some(entity_span),
         context_span: totality_span,
         context: "this hierarchy",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -1002,7 +1005,7 @@ fn do_parse_hierarchy_body(
         parse_error.EmptyHierarchy(
           enclosing_entity: entity_span,
           hierarchy_span: hierarchy_span,
-          hint: None,
+          hint: Some("TODO: add hint"),
         )
       entities
       |> list.reverse
@@ -1026,7 +1029,7 @@ fn do_parse_hierarchy_body(
       parse_error.UnexpectedTokenInHierarchyBody(
         enclosing_hierarchy: hierarchy_span,
         token_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1035,7 +1038,7 @@ fn do_parse_hierarchy_body(
         enclosing_definition: Some(entity_span),
         context_span: hierarchy_span,
         context: "this hierarchy",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -1056,7 +1059,10 @@ fn parse_relationship(
     // If there is the relationship's name but no `{` reports it as an error
     // since a relationship must always have a body.
     [#(Word(_), name_span), ..] ->
-      parse_error.RelationshipBodyWithNoEntities(name_span, None)
+      parse_error.RelationshipBodyWithNoEntities(
+        relationship_span: name_span,
+        hint: Some("TODO: add hint"),
+      )
       |> fail
 
     [#(token, span), ..] ->
@@ -1065,7 +1071,7 @@ fn parse_relationship(
         before_wrong_name: relationship_keyword_span,
         wrong_name: token.to_string(token),
         wrong_name_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1074,7 +1080,7 @@ fn parse_relationship(
         enclosing_definition: None,
         context_span: relationship_keyword_span,
         context: "this relationship",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -1118,12 +1124,15 @@ fn do_parse_relationship_body(
             relationship_span: relationship_span,
             relationship_name: relationship_name,
             entity_span: one_entity.span,
-            hint: None,
+            hint: Some("TODO: add hint"),
           )
           |> fail
 
         [] ->
-          parse_error.RelationshipBodyWithNoEntities(relationship_span, None)
+          parse_error.RelationshipBodyWithNoEntities(
+            relationship_span: relationship_span,
+            hint: Some("TODO: add hint"),
+          )
           |> fail
       }
 
@@ -1165,7 +1174,7 @@ fn do_parse_relationship_body(
       parse_error.KeyInsideRelationship(
         enclosing_relationship: relationship_span,
         lollipop_span: lollipop_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1175,7 +1184,7 @@ fn do_parse_relationship_body(
       parse_error.PossibleCircleLollipopTypo(
         enclosing_definition: relationship_span,
         typo_span: span.merge(minus_span, o_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1183,7 +1192,7 @@ fn do_parse_relationship_body(
       parse_error.PossibleArrowLollipopTypo(
         enclosing_definition: relationship_span,
         typo_span: span.merge(minus_span, arrow_span),
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1191,7 +1200,7 @@ fn do_parse_relationship_body(
       parse_error.UnexpectedTokenInRelationshipBody(
         enclosing_relationship: relationship_span,
         token_span: span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1200,7 +1209,7 @@ fn do_parse_relationship_body(
         enclosing_definition: None,
         context_span: relationship_span,
         context: "this relationship",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }
@@ -1232,7 +1241,7 @@ fn parse_relationship_entity(
       parse_error.MissingCardinalityAnnotation(
         enclosing_definition: relationship_span,
         before_span: name_span,
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1243,7 +1252,7 @@ fn parse_relationship_entity(
         wrong_name: token.to_string(token),
         wrong_name_span: span,
         after_what: "the `->` lollipop",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
 
@@ -1252,7 +1261,7 @@ fn parse_relationship_entity(
         enclosing_definition: Some(relationship_span),
         context_span: lollipop_span,
         context: "this entity",
-        hint: None,
+        hint: Some("TODO: add hint"),
       )
       |> fail
   }

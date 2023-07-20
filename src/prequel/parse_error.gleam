@@ -6,184 +6,184 @@ import prequel/span.{Span}
 /// TODO: document these errors and when each one makes sense with a little example
 pub type ParseError {
   WrongEntityName(
+    hint: Option(String),
     enclosing_definition: Option(Span),
     before_wrong_name: Span,
     wrong_name: String,
     wrong_name_span: Span,
     after_what: String,
-    hint: Option(String),
   )
 
   MoreThanOneHierarchy(
+    hint: Option(String),
     enclosing_entity: Span,
     first_hierarchy_span: Span,
     other_hierarchy_span: Span,
-    hint: Option(String),
   )
 
   PossibleCircleLollipopTypo(
+    hint: Option(String),
     enclosing_definition: Span,
     typo_span: Span,
-    hint: Option(String),
   )
 
   PossibleStarLollipopTypo(
+    hint: Option(String),
     enclosing_definition: Span,
     typo_span: Span,
-    hint: Option(String),
   )
 
   PossibleArrowLollipopTypo(
+    hint: Option(String),
     enclosing_definition: Span,
     typo_span: Span,
-    hint: Option(String),
   )
 
   WrongOrderOfHierarchyQualifiers(
+    hint: Option(String),
     enclosing_entity: Span,
     qualifiers_span: Span,
     first_qualifier: String,
     second_qualifier: String,
-    hint: Option(String),
   )
 
   UnqualifiedHierarchy(
+    hint: Option(String),
     enclosing_entity: Span,
     hierarchy_span: Span,
-    hint: Option(String),
   )
 
   UnexpectedTokenInEntityBody(
+    hint: Option(String),
     enclosing_entity: Span,
     token_span: Span,
-    hint: Option(String),
   )
 
   WrongAttributeName(
+    hint: Option(String),
     enclosing_definition: Span,
     lollipop_span: Span,
     wrong_name: String,
     wrong_name_span: Span,
-    hint: Option(String),
   )
 
   WrongCardinalityAnnotation(
+    hint: Option(String),
     enclosing_definition: Span,
     before_wrong_cardinality: Span,
     wrong_cardinality: String,
     wrong_cardinality_span: Span,
-    hint: Option(String),
   )
 
   WrongKeyName(
+    hint: Option(String),
     enclosing_entity: Span,
     lollipop_span: Span,
     wrong_key: String,
     wrong_key_span: Span,
-    hint: Option(String),
   )
 
   TypeAnnotationOnComposedKey(
+    hint: Option(String),
     enclosing_entity: Span,
     keywords_span: Span,
     colon_span: Span,
-    hint: Option(String),
   )
 
   MissingCardinalityAnnotation(
+    hint: Option(String),
     enclosing_definition: Span,
     before_span: Span,
-    hint: Option(String),
   )
 
   WrongRelationshipName(
+    hint: Option(String),
     enclosing_definition: Option(Span),
     before_wrong_name: Span,
     wrong_name: String,
     wrong_name_span: Span,
-    hint: Option(String),
   )
 
   KeyInsideRelationship(
+    hint: Option(String),
     enclosing_relationship: Span,
     lollipop_span: Span,
-    hint: Option(String),
   )
 
   UnexpectedTokenInBinaryRelationship(
+    hint: Option(String),
     enclosing_relationship: Span,
     token_span: Span,
-    hint: Option(String),
   )
 
   WrongHierarchyOverlapping(
+    hint: Option(String),
     enclosing_entity: Span,
     before_wrong_overlapping: Span,
     wrong_overlapping: String,
     wrong_overlapping_span: Span,
-    hint: Option(String),
   )
 
   MissingHierarchyKeyword(
+    hint: Option(String),
     enclosing_entity: Span,
     qualifiers_span: Span,
-    hint: Option(String),
   )
 
   EmptyHierarchy(
+    hint: Option(String),
     enclosing_entity: Span,
     hierarchy_span: Span,
-    hint: Option(String),
   )
 
   UnexpectedTokenInHierarchyBody(
+    hint: Option(String),
     enclosing_hierarchy: Span,
     token_span: Span,
-    hint: Option(String),
   )
 
-  RelationshipBodyWithNoEntities(relationship_span: Span, hint: Option(String))
+  RelationshipBodyWithNoEntities(hint: Option(String), relationship_span: Span)
 
   RelationshipBodyWithJustOneEntity(
+    hint: Option(String),
     relationship_span: Span,
     relationship_name: String,
     entity_span: Span,
-    hint: Option(String),
   )
 
   UnexpectedTokenInRelationshipBody(
+    hint: Option(String),
     enclosing_relationship: Span,
     token_span: Span,
-    hint: Option(String),
   )
 
-  UnexpectedTokenInTopLevel(token_span: Span, hint: Option(String))
+  UnexpectedTokenInTopLevel(hint: Option(String), token_span: Span)
 
   WrongLetterInUnboundedCardinality(
+    hint: Option(String),
     enclosing_definition: Span,
     wrong_letter_span: Span,
-    hint: Option(String),
   )
 
   IncompleteCardinality(
+    hint: Option(String),
     enclosing_definition: Span,
     cardinality_span: Span,
     missing: String,
-    hint: Option(String),
   )
 
   UnexpectedEndOfFile(
+    hint: Option(String),
     enclosing_definition: Option(Span),
     context_span: Span,
     context: String,
-    hint: Option(String),
   )
 
   InternalError(
+    hint: Option(String),
     enclosing_definition: Option(Span),
     context_span: Span,
     context: String,
-    hint: Option(String),
   )
 }
 
@@ -206,9 +206,7 @@ fn to_report(
   let name = name(of: error)
   let code = code(of: error)
   let blocks = blocks(of: error)
-  let hint = Some("foo")
-  //error.hint
-  Report(file_name, source_code, name, code, start, end, blocks, hint)
+  Report(file_name, source_code, name, code, start, end, blocks, error.hint)
 }
 
 /// Given an error, returns its code identifier.
@@ -292,51 +290,51 @@ fn name(of error: ParseError) -> String {
 /// 
 fn main_span(error: ParseError) -> Span {
   case error {
-    WrongEntityName(_, _, _, span, _, _) -> span
-    MoreThanOneHierarchy(_, _, span, _) -> span
-    PossibleCircleLollipopTypo(_, span, _) -> span
-    PossibleStarLollipopTypo(_, span, _) -> span
-    PossibleArrowLollipopTypo(_, span, _) -> span
-    WrongOrderOfHierarchyQualifiers(_, span, _, _, _) -> span
-    UnqualifiedHierarchy(_, span, _) -> span
-    UnexpectedTokenInEntityBody(_, span, _) -> span
-    WrongAttributeName(_, _, _, span, _) -> span
-    WrongCardinalityAnnotation(_, _, _, span, _) -> span
-    WrongKeyName(_, _, _, span, _) -> span
-    TypeAnnotationOnComposedKey(_, _, span, _) -> span
-    MissingCardinalityAnnotation(_, span, _) -> span
-    WrongRelationshipName(_, _, _, span, _) -> span
-    KeyInsideRelationship(_, span, _) -> span
-    UnexpectedTokenInBinaryRelationship(_, span, _) -> span
-    WrongHierarchyOverlapping(_, _, _, span, _) -> span
-    MissingHierarchyKeyword(_, span, _) -> span
-    EmptyHierarchy(_, span, _) -> span
-    UnexpectedTokenInHierarchyBody(_, span, _) -> span
-    RelationshipBodyWithNoEntities(span, _) -> span
-    RelationshipBodyWithJustOneEntity(span, _, _, _) -> span
-    UnexpectedTokenInRelationshipBody(_, span, _) -> span
-    WrongLetterInUnboundedCardinality(_, span, _) -> span
-    IncompleteCardinality(_, span, _, _) -> span
-    UnexpectedEndOfFile(_, span, _, _) -> span
-    UnexpectedTokenInTopLevel(span, _) -> span
-    InternalError(_, span, _, _) -> span
+    WrongEntityName(_, _, _, _, span, _) -> span
+    MoreThanOneHierarchy(_, _, _, span) -> span
+    PossibleCircleLollipopTypo(_, _, span) -> span
+    PossibleStarLollipopTypo(_, _, span) -> span
+    PossibleArrowLollipopTypo(_, _, span) -> span
+    WrongOrderOfHierarchyQualifiers(_, _, span, _, _) -> span
+    UnqualifiedHierarchy(_, _, span) -> span
+    UnexpectedTokenInEntityBody(_, _, span) -> span
+    WrongAttributeName(_, _, _, _, span) -> span
+    WrongCardinalityAnnotation(_, _, _, _, span) -> span
+    WrongKeyName(_, _, _, _, span) -> span
+    TypeAnnotationOnComposedKey(_, _, _, span) -> span
+    MissingCardinalityAnnotation(_, _, span) -> span
+    WrongRelationshipName(_, _, _, _, span) -> span
+    KeyInsideRelationship(_, _, span) -> span
+    UnexpectedTokenInBinaryRelationship(_, _, span) -> span
+    WrongHierarchyOverlapping(_, _, _, _, span) -> span
+    MissingHierarchyKeyword(_, _, span) -> span
+    EmptyHierarchy(_, _, span) -> span
+    UnexpectedTokenInHierarchyBody(_, _, span) -> span
+    RelationshipBodyWithNoEntities(_, span) -> span
+    RelationshipBodyWithJustOneEntity(_, span, _, _) -> span
+    UnexpectedTokenInRelationshipBody(_, _, span) -> span
+    WrongLetterInUnboundedCardinality(_, _, span) -> span
+    IncompleteCardinality(_, _, span, _) -> span
+    UnexpectedEndOfFile(_, _, span, _) -> span
+    UnexpectedTokenInTopLevel(_, span) -> span
+    InternalError(_, _, span, _) -> span
   }
 }
 
 fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
   case error {
-    WrongEntityName(Some(context), underlined, _, pointed, _, _) ->
+    WrongEntityName(_, Some(context), underlined, _, pointed, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(pointed, Some(underlined), message(error))],
       )
-    WrongEntityName(None, underlined, _, pointed, _, _) ->
+    WrongEntityName(_, None, underlined, _, pointed, _) ->
       non_empty_list.single(ErrorBlock(
         pointed,
         Some(underlined),
         message(error),
       ))
-    MoreThanOneHierarchy(context, first, second, _) ->
+    MoreThanOneHierarchy(_, context, first, second) ->
       non_empty_list.new(
         ContextBlock(context),
         [
@@ -348,171 +346,171 @@ fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
           ),
         ],
       )
-    PossibleCircleLollipopTypo(context, span, _) ->
+    PossibleCircleLollipopTypo(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    PossibleStarLollipopTypo(context, span, _) ->
+    PossibleStarLollipopTypo(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    PossibleArrowLollipopTypo(context, span, _) ->
+    PossibleArrowLollipopTypo(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    WrongOrderOfHierarchyQualifiers(context, span, _, _, _) ->
+    WrongOrderOfHierarchyQualifiers(_, context, span, _, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnqualifiedHierarchy(context, span, _) ->
+    UnqualifiedHierarchy(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedTokenInEntityBody(context, span, _) ->
+    UnexpectedTokenInEntityBody(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    WrongAttributeName(context, underlined, _, span, _) ->
+    WrongAttributeName(_, context, underlined, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    WrongCardinalityAnnotation(context, underlined, _, span, _) ->
+    WrongCardinalityAnnotation(_, context, underlined, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    WrongKeyName(context, underlined, _, span, _) ->
+    WrongKeyName(_, context, underlined, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    TypeAnnotationOnComposedKey(context, underlined, span, _) ->
+    TypeAnnotationOnComposedKey(_, context, underlined, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    MissingCardinalityAnnotation(context, span, _) ->
+    MissingCardinalityAnnotation(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    WrongRelationshipName(Some(context), underlined, _, span, _) ->
+    WrongRelationshipName(_, Some(context), underlined, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    WrongRelationshipName(None, underlined, _, span, _) ->
+    WrongRelationshipName(_, None, underlined, _, span) ->
       non_empty_list.single(ErrorBlock(span, Some(underlined), message(error)))
-    KeyInsideRelationship(context, span, _) ->
+    KeyInsideRelationship(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedTokenInBinaryRelationship(context, span, _) ->
+    UnexpectedTokenInBinaryRelationship(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    WrongHierarchyOverlapping(context, underlined, _, span, _) ->
+    WrongHierarchyOverlapping(_, context, underlined, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, Some(underlined), message(error))],
       )
-    MissingHierarchyKeyword(context, span, _) ->
+    MissingHierarchyKeyword(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    EmptyHierarchy(context, span, _) ->
+    EmptyHierarchy(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedTokenInHierarchyBody(context, span, _) ->
+    UnexpectedTokenInHierarchyBody(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    RelationshipBodyWithNoEntities(span, _) ->
+    RelationshipBodyWithNoEntities(_, span) ->
       non_empty_list.single(ErrorBlock(span, None, message(error)))
-    RelationshipBodyWithJustOneEntity(context, _, span, _) ->
+    RelationshipBodyWithJustOneEntity(_, context, _, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedTokenInRelationshipBody(context, span, _) ->
+    UnexpectedTokenInRelationshipBody(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    WrongLetterInUnboundedCardinality(context, span, _) ->
+    WrongLetterInUnboundedCardinality(_, context, span) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    IncompleteCardinality(context, span, _, _) ->
+    IncompleteCardinality(_, context, span, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedEndOfFile(Some(context), span, _, _) ->
+    UnexpectedEndOfFile(_, Some(context), span, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    UnexpectedEndOfFile(None, span, _, _) ->
+    UnexpectedEndOfFile(_, None, span, _) ->
       non_empty_list.single(ErrorBlock(span, None, message(error)))
-    UnexpectedTokenInTopLevel(span, _) ->
+    UnexpectedTokenInTopLevel(_, span) ->
       non_empty_list.single(ErrorBlock(span, None, message(error)))
-    InternalError(Some(context), span, _, _) ->
+    InternalError(_, Some(context), span, _) ->
       non_empty_list.new(
         ContextBlock(context),
         [ErrorBlock(span, None, message(error))],
       )
-    InternalError(None, span, _, _) ->
+    InternalError(_, None, span, _) ->
       non_empty_list.single(ErrorBlock(span, None, message(error)))
   }
 }
 
 fn message(error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, wrong_name, _, after_what, _) ->
+    WrongEntityName(_, _, _, wrong_name, _, after_what) ->
       "I was expecting to find an entity name after " <> after_what <> " but I ran into `" <> wrong_name <> "`, which is not a valid name"
     MoreThanOneHierarchy(_, _, _, _) ->
       "An entity can only be the root of one hierarchy. Here is the first one..."
     PossibleCircleLollipopTypo(_, _, _) -> "Did you mean to write `-o` here?"
     PossibleStarLollipopTypo(_, _, _) -> "Did you mean to write `-*` here?"
     PossibleArrowLollipopTypo(_, _, _) -> "Did you mean to write `->` here?"
-    WrongOrderOfHierarchyQualifiers(_, _, first, second, _) ->
+    WrongOrderOfHierarchyQualifiers(_, _, _, first, second) ->
       "Did you mean to write `" <> second <> " " <> first <> "` here?"
     UnqualifiedHierarchy(_, _, _) ->
       "This hierarchy is missing its totality and overlapping qualifiers"
     UnexpectedTokenInEntityBody(_, _, _) ->
       "I didn't expect to find this token inside an entity's body"
-    WrongAttributeName(_, _, name, _, _) ->
+    WrongAttributeName(_, _, _, name, _) ->
       "I was expecting to find an attribute name but I ran into `" <> name <> "`, which is not a valid name"
-    WrongCardinalityAnnotation(_, _, wrong_cardinality, _, _) ->
+    WrongCardinalityAnnotation(_, _, _, wrong_cardinality, _) ->
       "I was expecting a cardinality annotation but I ran into `" <> wrong_cardinality <> "`, which is not a valid cardinality"
-    WrongKeyName(_, _, name, _, _) ->
+    WrongKeyName(_, _, _, name, _) ->
       "I was expecting to find a key name but I ran into `" <> name <> "`, which is not a valid name"
     TypeAnnotationOnComposedKey(_, _, _, _) ->
       "A key composed of multiple items cannot have a type or cardinality annotation"
     MissingCardinalityAnnotation(_, _, _) ->
       "I was expecting to find a cardinality annotation after this"
-    WrongRelationshipName(_, _, name, _, _) ->
+    WrongRelationshipName(_, _, _, name, _) ->
       "I was expecting to find a relationship name but I ran into `" <> name <> "`, which is not a valid name"
     KeyInsideRelationship(_, _, _) ->
       "A relationship cannot contain any keys, did you mean to write `-o` instead?"
     UnexpectedTokenInBinaryRelationship(_, _, _) ->
       "I didn't expect to find this token inside a relationship's body"
-    WrongHierarchyOverlapping(_, _, name, _, _) ->
+    WrongHierarchyOverlapping(_, _, _, name, _) ->
       "I was expecting to find an overlapping qualifier (either `overlapped` or `disjoint`), but I ran into `" <> name <> "`, which is not a valid qualifier"
     MissingHierarchyKeyword(_, _, _) ->
       "I was expecting to find the `hierarchy` keyword after these qualifiers"
@@ -521,17 +519,17 @@ fn message(error: ParseError) -> String {
       "I didn't expect to find this token inside a hierarchy's body"
     RelationshipBodyWithNoEntities(_, _) ->
       "This relationship has no entities in its body"
-    RelationshipBodyWithJustOneEntity(_, name, _, _) ->
+    RelationshipBodyWithJustOneEntity(_, _, name, _) ->
       "This is the only entity taking part into the relationship `" <> name <> "`"
     UnexpectedTokenInRelationshipBody(_, _, _) ->
       "I didn't expect to find this token inside a relationship's body"
     WrongLetterInUnboundedCardinality(_, _, _) ->
       "Did you mean to write `N` as the upper bound of this cardinality?"
-    IncompleteCardinality(_, _, what, _) ->
+    IncompleteCardinality(_, _, _, what) ->
       "This looks like a cardinality annotation but it is missing " <> what
-    UnexpectedEndOfFile(_, _, what, _) ->
+    UnexpectedEndOfFile(_, _, _, what) ->
       "I ran into the end of file halfway through parsing " <> what
     UnexpectedTokenInTopLevel(_, _) -> "I didn't expect to find this token here"
-    InternalError(_, _, what, _) -> what
+    InternalError(_, _, _, what) -> what
   }
 }
