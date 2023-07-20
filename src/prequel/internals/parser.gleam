@@ -644,7 +644,7 @@ fn parse_multi_attribute_key(
     [#(Word(_), last_word_span), #(Colon, colon_span), ..] ->
       parse_error.TypeAnnotationOnComposedKey(
         enclosing_entity: entity_span,
-        key_words_span: span.merge(first_word_span, last_word_span),
+        keywords_span: span.merge(first_word_span, last_word_span),
         colon_span: colon_span,
         hint: None,
       )
@@ -652,8 +652,7 @@ fn parse_multi_attribute_key(
 
     // If there is a word not followed by `&` it is done parsing the key.
     [#(Word(key), last_word_span), ..tokens] ->
-      first_word_span
-      |> span.merge(with: last_word_span)
+      span.merge(first_word_span, last_word_span)
       |> ComposedKey(non_empty_list.reverse(non_empty_list.new(key, keys)))
       |> succeed(tokens)
 

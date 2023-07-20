@@ -85,7 +85,7 @@ pub type ParseError {
 
   TypeAnnotationOnComposedKey(
     enclosing_entity: Span,
-    key_words_span: Span,
+    keywords_span: Span,
     colon_span: Span,
     hint: Option(String),
   )

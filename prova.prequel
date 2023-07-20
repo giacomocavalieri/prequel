@@ -1,14 +1,7 @@
 entity prova {
-  -* key1
+  -* key1 & ()
 
   -o attr1
   -o attr2
 
-  total disjoint hierarchy {
-    entity subentity
-  }
-
-  total disjoint hierarchy {
-    entity subentity
-  }
 }
