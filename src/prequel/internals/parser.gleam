@@ -576,11 +576,12 @@ fn do_parse_key(
   case tokens {
     // If there is a multi-item key with an `&` it switches to multi-key
     // parsing.
-    [#(Word(key), first_word_span), #(Ampersand, _), ..tokens] -> {
+    [#(Word(key), first_word_span), #(Ampersand, last_ampersand_span), ..tokens] -> {
       use key, tokens <- try(parse_multi_attribute_key(
         tokens,
         entity_span,
         lollipop_span,
+        last_ampersand_span,
         first_word_span,
         [key],
       ))
@@ -628,16 +629,18 @@ fn parse_multi_attribute_key(
   tokens: List(#(Token, Span)),
   entity_span: Span,
   lollipop_span: Span,
+  last_ampersand_span: Span,
   first_word_span: Span,
   keys: List(String),
 ) -> ParseResult(Key) {
   case tokens {
     // If there is another `&` it keeps going.
-    [#(Word(key), _), #(Ampersand, _), ..tokens] ->
+    [#(Word(key), _), #(Ampersand, last_ampersand_span), ..tokens] ->
       parse_multi_attribute_key(
         tokens,
         entity_span,
         lollipop_span,
+        last_ampersand_span,
         first_word_span,
         [key, ..keys],
       )
@@ -660,9 +663,9 @@ fn parse_multi_attribute_key(
       |> succeed(tokens)
 
     [#(token, span), ..] ->
-      parse_error.WrongKeyName(
+      parse_error.IncompleteComposedKey(
         enclosing_entity: entity_span,
-        lollipop_span: lollipop_span,
+        composed_key_span: span.merge(lollipop_span, last_ampersand_span),
         wrong_key: token.to_string(token),
         wrong_key_span: span,
         hint: Some("TODO: add hint"),

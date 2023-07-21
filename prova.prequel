@@ -1,7 +1,6 @@
-entity prova {
-  -* key1 & ()
+entity test {
+  -* attr1 & ()
 
   -o attr1
   -o attr2
-
 }

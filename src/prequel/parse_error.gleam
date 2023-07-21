@@ -185,6 +185,14 @@ pub type ParseError {
     context_span: Span,
     context: String,
   )
+
+  IncompleteComposedKey(
+    hint: Option(String),
+    composed_key_span: Span,
+    enclosing_entity: Span,
+    wrong_key: String,
+    wrong_key_span: Span,
+  )
 }
 
 pub fn to_pretty_string(
@@ -241,6 +249,7 @@ fn code(of error: ParseError) -> String {
     UnexpectedEndOfFile(_, _, _, _) -> "E026"
     UnexpectedTokenInTopLevel(_, _) -> "E027"
     InternalError(_, _, _, _) -> "E028"
+    IncompleteComposedKey(_, _, _, _, _) -> "E029"
   }
 }
 
@@ -282,6 +291,7 @@ fn name(of error: ParseError) -> String {
     UnexpectedEndOfFile(_, _, _, _) -> "Unexpected end of file"
     UnexpectedTokenInTopLevel(_, _) -> "Unexpected token"
     InternalError(_, _, _, _) -> "Internal error"
+    IncompleteComposedKey(_, _, _, _, _) -> "Incomplete composed key"
   }
 }
 
@@ -318,6 +328,7 @@ fn main_span(error: ParseError) -> Span {
     UnexpectedEndOfFile(_, _, span, _) -> span
     UnexpectedTokenInTopLevel(_, span) -> span
     InternalError(_, _, span, _) -> span
+    IncompleteComposedKey(_, _, _, _, span) -> span
   }
 }
 
@@ -476,6 +487,17 @@ fn blocks(of error: ParseError) -> NonEmptyList(ReportBlock) {
       )
     InternalError(_, None, span, _) ->
       non_empty_list.single(ErrorBlock(span, None, message(error)))
+    IncompleteComposedKey(
+      _,
+      composed_key_span,
+      enclosing_entity,
+      _,
+      wrong_key_span,
+    ) ->
+      non_empty_list.new(
+        ContextBlock(enclosing_entity),
+        [ErrorBlock(wrong_key_span, Some(composed_key_span), message(error))],
+      )
   }
 }
 
@@ -531,5 +553,6 @@ fn message(error: ParseError) -> String {
       "I ran into the end of file halfway through parsing " <> what
     UnexpectedTokenInTopLevel(_, _) -> "I didn't expect to find this token here"
     InternalError(_, _, _, what) -> what
+    IncompleteComposedKey(_, _, _, wrong_key, _) -> "foo " <> wrong_key
   }
 }
