@@ -1,8 +1,8 @@
-import gleam/option.{None, Option, Some}
+import gleam/option.{None, Option}
 import non_empty_list.{NonEmptyList}
-import prequel/ast.{Cardinality}
+import prequel/ast.{Cardinality, Entity}
 import prequel/span.{Span}
-import prequel/internals/report.{Report}
+import prequel/internals/report.{ContextBlock, ErrorBlock, Report, ReportBlock}
 
 /// TODO: add doc
 pub type ValidationError {
@@ -10,6 +10,11 @@ pub type ValidationError {
     hint: Option(String),
     enclosing_definition: Span,
     cardinality: Cardinality,
+  )
+  DuplicateEntityName(
+    hint: Option(String),
+    first_entity: Entity,
+    other_entity: Entity,
   )
 }
 
@@ -30,6 +35,7 @@ pub fn to_report(
 fn main_span(error: ValidationError) -> Span {
   case error {
     LowerBoundGreaterThanUpperBound(_, _, cardinality) -> cardinality.span
+    DuplicateEntityName(_, _, other_entity) -> other_entity.span
   }
 }
 
@@ -37,19 +43,37 @@ fn name(of error: ValidationError) -> String {
   case error {
     LowerBoundGreaterThanUpperBound(_, _, _) ->
       "Lower bound greater than upper bound"
+    DuplicateEntityName(_, _, _) -> "Duplicate entity name"
   }
 }
 
 fn code(of error: ValidationError) -> String {
   case error {
     LowerBoundGreaterThanUpperBound(_, _, _) -> "VE001"
+    DuplicateEntityName(_, _, _) -> "VE002"
   }
 }
 
-fn blocks(of error: ValidationError) -> NonEmptyList(report.ReportBlock) {
+fn blocks(of error: ValidationError) -> NonEmptyList(ReportBlock) {
   case error {
-    LowerBoundGreaterThanUpperBound(_, enclosing_entity, cardinality) -> {
-      todo
-    }
+    LowerBoundGreaterThanUpperBound(_, enclosing_entity, cardinality) ->
+      non_empty_list.new(
+        ContextBlock(enclosing_entity),
+        [ErrorBlock(cardinality.span, None, message(error))],
+      )
+    DuplicateEntityName(_, one, other) ->
+      non_empty_list.new(
+        ErrorBlock(one.span, None, message(error)),
+        [ErrorBlock(other.span, None, "...and here is the other one")],
+      )
+  }
+}
+
+fn message(error: ValidationError) -> String {
+  case error {
+    LowerBoundGreaterThanUpperBound(_, _, _) ->
+      "The lower bound of a cardinality should always be lower than its upper bound"
+    DuplicateEntityName(_, _, _) ->
+      "Two entities cannot have the same name. Here is the first one..."
   }
 }

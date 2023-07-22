@@ -1,6 +1,6 @@
 import gleam/list
 import gleam/option.{None, Option, Some}
-import non_empty_list
+import non_empty_list.{NonEmptyList}
 import prequel/ast.{
   Attribute, Bounded, Cardinality, Entity, Hierarchy, Module, Relationship,
   RelationshipEntity, Unbounded,
@@ -11,8 +11,8 @@ import prequel/error/validation_error.{ValidationError}
 
 /// Validates a module and returns a list of all the errors found.
 /// 
-pub fn validate_module(module: Module) -> List(ValidationError) {
-  [validate_cardinalities_bounds]
+pub fn check_module(module: Module) -> List(ValidationError) {
+  [check_cardinalities_bounds, check_entities_all_have_different_names]
   |> gather_errors(from: module)
 }
 
@@ -30,9 +30,9 @@ fn gather_errors(
 /// than the upper bound. Any wrong cardinality is reported in the resulting
 /// list.
 /// 
-fn validate_cardinalities_bounds(module: Module) -> List(ValidationError) {
+fn check_cardinalities_bounds(module: Module) -> List(ValidationError) {
   cardinalities_from_module(module)
-  |> list_extra.map_pair(validate_cardinality_bounds)
+  |> list_extra.map_pairs(check_cardinality_bounds)
   |> option.values
 }
 
@@ -97,7 +97,7 @@ fn cardinality_from_attribute(attribute: Attribute) -> Cardinality {
 /// Validates a cardinality's bounds by returning an error if its lower bound
 /// is bigger than its upper bound.
 /// 
-fn validate_cardinality_bounds(
+fn check_cardinality_bounds(
   enclosing_definition: Span,
   cardinality: Cardinality,
 ) -> Option(ValidationError) {
@@ -107,7 +107,7 @@ fn validate_cardinality_bounds(
       Some(validation_error.LowerBoundGreaterThanUpperBound(
         enclosing_definition: enclosing_definition,
         cardinality: cardinality,
-        hint: None,
+        hint: Some("TODO: add hint"),
       ))
   }
 }
@@ -119,4 +119,42 @@ fn cardinality_has_valid_bounds(cardinality: Cardinality) -> Bool {
     Bounded(_, lower_bound, upper_bound) if lower_bound > upper_bound -> False
     Unbounded(_, _) | Bounded(_, _, _) -> True
   }
+}
+
+/// Checks that all entities declared in a module have different names.
+/// 
+fn check_entities_all_have_different_names(
+  module: Module,
+) -> List(ValidationError) {
+  entities_from_module(module)
+  |> list_extra.duplicates(by: fn(entity) { entity.name })
+  |> list_extra.map_pairs(to_duplicate_entity_error)
+}
+
+fn entities_from_module(module: Module) -> List(Entity) {
+  let top_level_entities = module.entities
+  let sub_entities = list.flat_map(top_level_entities, entities_from_entity)
+  list.append(top_level_entities, sub_entities)
+}
+
+fn entities_from_entity(entity: Entity) -> List(Entity) {
+  case entity.children {
+    None -> []
+    Some(hierarchy) -> {
+      let children = non_empty_list.to_list(hierarchy.children)
+      list.flat_map(children, entities_from_entity)
+      |> list.append(children)
+    }
+  }
+}
+
+fn to_duplicate_entity_error(
+  first_entity: Entity,
+  other_entities: NonEmptyList(Entity),
+) -> ValidationError {
+  validation_error.DuplicateEntityName(
+    hint: Some("TODO: add hint"),
+    first_entity: first_entity,
+    other_entity: other_entities.first,
+  )
 }

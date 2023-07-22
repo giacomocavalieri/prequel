@@ -26,6 +26,6 @@ pub fn format(
       |> non_empty_list.to_list
       |> list.map(validation_error.to_report(_, file_name, source_code))
       |> list.map(report.format)
-      |> string_builder.join(with: "\n")
+      |> string_builder.join(with: "\n\n\n")
   }
 }

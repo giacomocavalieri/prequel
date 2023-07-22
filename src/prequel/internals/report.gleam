@@ -85,6 +85,7 @@ pub fn format(report: Report) -> StringBuilder {
     blocks_to_string_builder(report.source_code, report.blocks, max_line),
     hint_to_string_builder(report.hint),
   ]
+  |> list.filter(fn(builder) { !string_builder.is_empty(builder) })
   |> string_builder.join("\n")
 }
 
@@ -121,7 +122,7 @@ fn error_heading(error_code: String, error_name: String) -> StringBuilder {
 /// `max_line` is needed to give the heading the correct pad to align it
 /// with the report blocks.
 /// 
-pub fn file_heading(
+fn file_heading(
   file_name: String,
   error_line: Int,
   error_column: Int,

@@ -15,7 +15,7 @@ pub fn parse(source: String) -> Result(Module, PipelineError) {
     |> result.map_error(pipeline_error.ParsingFailure)
 
   use module <- result.then(parse_result)
-  case checker.validate_module(module) {
+  case checker.check_module(module) {
     [] -> Ok(module)
     [error, ..errors] ->
       Error(pipeline_error.ValidationFailure(non_empty_list.new(error, errors)))
