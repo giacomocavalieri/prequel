@@ -29,12 +29,7 @@ pub fn to_report(
 
 fn main_span(error: ValidationError) -> Span {
   case error {
-    LowerBoundGreaterThanUpperBound(_, enclosing_entity, cardinality) -> {
-      case cardinality.span {
-        Some(span) -> span
-        None -> enclosing_entity
-      }
-    }
+    LowerBoundGreaterThanUpperBound(_, _, cardinality) -> cardinality.span
   }
 }
 
@@ -53,6 +48,8 @@ fn code(of error: ValidationError) -> String {
 
 fn blocks(of error: ValidationError) -> NonEmptyList(report.ReportBlock) {
   case error {
-    LowerBoundGreaterThanUpperBound(_, _, _) -> todo
+    LowerBoundGreaterThanUpperBound(_, enclosing_entity, cardinality) -> {
+      todo
+    }
   }
 }

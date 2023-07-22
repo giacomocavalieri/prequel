@@ -358,7 +358,7 @@ fn parse_attribute(
     // Parse an attribute that has no type/cardinality annotation, the default
     // cardinality of (1-1) is used.
     [#(Word(name), name_span), ..tokens] ->
-      Attribute(name_span, name, Bounded(None, 1, 1), NoType)
+      Attribute(name_span, name, Bounded(name_span, 1, 1), NoType)
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -431,9 +431,8 @@ fn parse_cardinality(
       use lower <- result.try(result)
       let result = parse_number(raw_upper, raw_upper_span, enclosing_span)
       use upper <- result.try(result)
-      span.merge(start, end)
-      |> Some
-      |> Bounded(lower, upper)
+
+      Bounded(span.merge(start, end), lower, upper)
       |> succeed(tokens)
     }
 
@@ -448,9 +447,7 @@ fn parse_cardinality(
     ] -> {
       let result = parse_number(raw_lower, raw_lower_span, enclosing_span)
       use lower <- result.try(result)
-      span.merge(start, end)
-      |> Some
-      |> Unbounded(lower)
+      Unbounded(span.merge(start, end), lower)
       |> succeed(tokens)
     }
 
@@ -527,7 +524,7 @@ fn parse_cardinality(
     // If it is lenient and did not incur in any obvious mistake it defaults
     // to the `(1-1)` cardinality.
     [_, ..] if lenient ->
-      Bounded(None, 1, 1)
+      Bounded(preceding_span, 1, 1)
       |> succeed(tokens)
 
     [#(token, span), ..] ->
@@ -763,7 +760,7 @@ fn parse_inner_relationship(
         [#(token, span), ..] ->
           parse_error.WrongEntityName(
             enclosing_definition: Some(entity_span),
-            before_wrong_name: option.unwrap(one_cardinality.span, colon_span),
+            before_wrong_name: one_cardinality.span,
             wrong_name: token.to_string(token),
             wrong_name_span: span,
             after_what: "the first cardinality annotation",
