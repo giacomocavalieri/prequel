@@ -1,6 +1,6 @@
 import gleam/option.{None, Option}
 import non_empty_list.{NonEmptyList}
-import prequel/ast.{Cardinality, Entity}
+import prequel/ast.{Cardinality, Entity, Relationship}
 import prequel/span.{Span}
 import prequel/internals/report.{ContextBlock, ErrorBlock, Report, ReportBlock}
 
@@ -15,6 +15,11 @@ pub type ValidationError {
     hint: Option(String),
     first_entity: Entity,
     other_entity: Entity,
+  )
+  DuplicateRelationshipName(
+    hint: Option(String),
+    first_relationship: Relationship,
+    other_relationship: Relationship,
   )
 }
 
@@ -36,6 +41,8 @@ fn main_span(error: ValidationError) -> Span {
   case error {
     LowerBoundGreaterThanUpperBound(_, _, cardinality) -> cardinality.span
     DuplicateEntityName(_, _, other_entity) -> other_entity.span
+    DuplicateRelationshipName(_, _, other_relationship) ->
+      other_relationship.span
   }
 }
 
@@ -44,6 +51,7 @@ fn name(of error: ValidationError) -> String {
     LowerBoundGreaterThanUpperBound(_, _, _) ->
       "Lower bound greater than upper bound"
     DuplicateEntityName(_, _, _) -> "Duplicate entity name"
+    DuplicateRelationshipName(_, _, _) -> "Duplicate relationship name"
   }
 }
 
@@ -51,6 +59,7 @@ fn code(of error: ValidationError) -> String {
   case error {
     LowerBoundGreaterThanUpperBound(_, _, _) -> "VE001"
     DuplicateEntityName(_, _, _) -> "VE002"
+    DuplicateRelationshipName(_, _, _) -> "VE003"
   }
 }
 
@@ -66,6 +75,11 @@ fn blocks(of error: ValidationError) -> NonEmptyList(ReportBlock) {
         ErrorBlock(one.span, None, message(error)),
         [ErrorBlock(other.span, None, "...and here is the other one")],
       )
+    DuplicateRelationshipName(_, one, other) ->
+      non_empty_list.new(
+        ErrorBlock(one.span, None, message(error)),
+        [ErrorBlock(other.span, None, "...and here is the other one")],
+      )
   }
 }
 
@@ -75,5 +89,7 @@ fn message(error: ValidationError) -> String {
       "The lower bound of a cardinality should always be lower than its upper bound"
     DuplicateEntityName(_, _, _) ->
       "Two entities cannot have the same name. Here is the first one..."
+    DuplicateRelationshipName(_, _, _) ->
+      "Two relationships cannot have the same name. Here is the first one..."
   }
 }

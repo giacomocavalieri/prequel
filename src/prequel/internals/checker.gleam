@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
 import non_empty_list.{NonEmptyList}
@@ -12,7 +13,11 @@ import prequel/error/validation_error.{ValidationError}
 /// Validates a module and returns a list of all the errors found.
 /// 
 pub fn check_module(module: Module) -> List(ValidationError) {
-  [check_cardinalities_bounds, check_entities_all_have_different_names]
+  [
+    check_cardinalities_bounds,
+    check_all_entities_have_different_names,
+    check_all_relationships_have_different_names,
+  ]
   |> gather_errors(from: module)
 }
 
@@ -123,7 +128,7 @@ fn cardinality_has_valid_bounds(cardinality: Cardinality) -> Bool {
 
 /// Checks that all entities declared in a module have different names.
 /// 
-fn check_entities_all_have_different_names(
+fn check_all_entities_have_different_names(
   module: Module,
 ) -> List(ValidationError) {
   entities_from_module(module)
@@ -152,9 +157,64 @@ fn to_duplicate_entity_error(
   first_entity: Entity,
   other_entities: NonEmptyList(Entity),
 ) -> ValidationError {
+  // Sorts the entities by their starting line so that the one that comes first
+  // is always reported first.
+  let assert [first, other] =
+    list.sort(
+      [first_entity, other_entities.first],
+      fn(one, other) { int.compare(one.span.start_line, other.span.start_line) },
+    )
+
   validation_error.DuplicateEntityName(
     hint: Some("TODO: add hint"),
-    first_entity: first_entity,
-    other_entity: other_entities.first,
+    first_entity: first,
+    other_entity: other,
+  )
+}
+
+fn check_all_relationships_have_different_names(
+  module: Module,
+) -> List(ValidationError) {
+  relationships_from_module(module)
+  |> list_extra.duplicates(by: fn(relationship) { relationship.name })
+  |> list_extra.map_pairs(to_duplicate_relationship_error)
+}
+
+fn relationships_from_module(module: Module) -> List(Relationship) {
+  let top_level_relationships = module.relationships
+  let all_entities = entities_from_module(module)
+  let inner_relationships =
+    list.flat_map(all_entities, relationships_from_entity)
+
+  list.append(top_level_relationships, inner_relationships)
+}
+
+fn relationships_from_entity(entity: Entity) -> List(Relationship) {
+  let sub_relationships = case entity.children {
+    Some(hierarchy) ->
+      non_empty_list.to_list(hierarchy.children)
+      |> list.flat_map(relationships_from_entity)
+    None -> []
+  }
+
+  list.append(entity.inner_relationships, sub_relationships)
+}
+
+fn to_duplicate_relationship_error(
+  first_relationship: Relationship,
+  other_relationships: NonEmptyList(Relationship),
+) -> ValidationError {
+  // Sorts the relationships by their starting line so that the one that comes
+  // first is always reported first.
+  let assert [first, other] =
+    list.sort(
+      [first_relationship, other_relationships.first],
+      fn(one, other) { int.compare(one.span.start_line, other.span.start_line) },
+    )
+
+  validation_error.DuplicateRelationshipName(
+    hint: Some("TODO: add hint"),
+    first_relationship: first,
+    other_relationship: other,
   )
 }

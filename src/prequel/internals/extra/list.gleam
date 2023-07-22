@@ -37,10 +37,7 @@ pub fn duplicates(
   list.group(list, fun)
   |> map.values
   |> list.filter_map(fn(entities) {
-    // The list gets reversed to keep the same order in which the elements are
-    // met in the original list since the stdlib's implementation returns them
-    // in reverse order.
-    case list.reverse(entities) {
+    case entities {
       [one, two, ..more] -> Ok(#(one, non_empty_list.new(two, more)))
       _ -> Error(Nil)
     }
