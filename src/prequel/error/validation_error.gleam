@@ -24,12 +24,12 @@ pub fn to_report(
   source_code: String,
 ) -> Report {
   let main_span = main_span(error)
-  let start = main_span.start_line
-  let end = main_span.end_line
+  let line = main_span.start_line
+  let column = main_span.start_column
   let name = name(of: error)
   let code = code(of: error)
   let blocks = blocks(of: error)
-  Report(file_name, source_code, name, code, start, end, blocks, error.hint)
+  Report(file_name, source_code, name, code, line, column, blocks, error.hint)
 }
 
 fn main_span(error: ValidationError) -> Span {

@@ -1,16 +1,12 @@
 entity person {
   -* id
 
-  -o first_name : (1-0)
-  -o last_name : (2-1)
+  -o first_name
+  -o last_name
 
   total disjoint hierarchy {
     entity student {
       -* badge_number
-      total disjoint hierarchy {
-        entity person
-        entity pippo
-      }
     }
   }
 }
@@ -18,9 +14,10 @@ entity person {
 entity prova {
   total disjoint hierarchy {
     entity pippo
-    entity pippo
   }
 }
+
+entity person
 
 relationship student_in_classroom {
   -> student : (1-2)
