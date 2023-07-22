@@ -104,7 +104,7 @@ fn validate_cardinality_bounds(
   case cardinality_has_valid_bounds(cardinality) {
     True -> None
     False ->
-      Some(validation_error.LowerBoundBiggerThanUpperBound(
+      Some(validation_error.LowerBoundGreaterThanUpperBound(
         enclosing_definition: enclosing_definition,
         cardinality: cardinality,
         hint: None,

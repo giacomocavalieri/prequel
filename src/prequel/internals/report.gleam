@@ -66,8 +66,8 @@ type CodeLines =
   List(CodeLine)
 
 /// Turns a `Report` into a pretty printed string that displays the report.
-/// 
-pub fn to_string(report: Report) -> String {
+///
+pub fn format(report: Report) -> StringBuilder {
   let error_code_length = string.length(report.error_code)
   let max_line = max_line(report.blocks)
   let min_line = min_line(report.blocks)
@@ -86,7 +86,6 @@ pub fn to_string(report: Report) -> String {
     hint_to_string_builder(report.hint),
   ]
   |> string_builder.join("\n")
-  |> string_builder.to_string
 }
 
 /// Builds a nice error heading from a given parse error.

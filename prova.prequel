@@ -1,8 +1,8 @@
 entity person {
   -* id
 
-  -o first_name : int
-  -o last_name : int
+  -o first_name
+  -o last_name
 
   total disjoint hierarchy {
     entity student {

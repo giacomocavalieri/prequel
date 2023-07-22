@@ -10,7 +10,7 @@ import prequel/ast.{
   Total, Unbounded,
 }
 
-pub fn format(module: Module) -> String {
+pub fn format(module: Module) -> StringBuilder {
   let entities =
     module.entities
     |> list.map(pretty_entity(_, 0))
@@ -24,7 +24,6 @@ pub fn format(module: Module) -> String {
   [entities, relationships]
   |> list.filter(fn(builder) { !string_builder.is_empty(builder) })
   |> string_builder.join(with: "\n\n")
-  |> string_builder.to_string()
 }
 
 fn entity_has_empty_body(entity: Entity) -> Bool {
