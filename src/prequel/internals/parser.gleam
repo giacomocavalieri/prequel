@@ -5,10 +5,10 @@ import gleam/result
 import non_empty_list.{NonEmptyList}
 import prequel/ast.{
   Attribute, Bounded, Cardinality, ComposedKey, Disjoint, Entity, Hierarchy, Key,
-  NoType, Overlapped, Overlapping, Partial, Relationship, RelationshipEntity,
-  SingleKey, Total, Totality, Type, Unbounded,
+  Module, NoType, Overlapped, Overlapping, Partial, Relationship,
+  RelationshipEntity, SingleKey, Total, Totality, Type, Unbounded,
 }
-import prequel/parse_error.{ParseError}
+import prequel/error/parse_error.{ParseError}
 import prequel/span.{Span}
 import prequel/internals/token.{
   Ampersand, ArrowLollipop, CircleLollipop, CloseBracket, CloseParens, Colon,
@@ -17,19 +17,26 @@ import prequel/internals/token.{
 
 /// Tail recursive (hopefully, I should check it!! TODO) parser.
 /// 
-pub fn parse(
+pub fn parse(tokens: List(#(Token, Span))) -> Result(Module, ParseError) {
+  case do_parse(tokens, [], []) {
+    Ok(#(module, _)) -> Ok(module)
+    Error(error) -> Error(error)
+  }
+}
+
+fn do_parse(
   tokens: List(#(Token, Span)),
   entities: List(Entity),
   relationships: List(Relationship),
-) -> ParseResult(#(List(Entity), List(Relationship))) {
+) -> ParseResult(Module) {
   case tokens {
     [] ->
-      #(list.reverse(entities), list.reverse(relationships))
+      Module(list.reverse(entities), list.reverse(relationships))
       |> succeed([])
 
     [#(Word("entity"), entity_keyword_span), ..tokens] -> {
       use entity, tokens <- try(parse_entity(tokens, entity_keyword_span))
-      parse(tokens, [entity, ..entities], relationships)
+      do_parse(tokens, [entity, ..entities], relationships)
     }
 
     [#(Word("relationship"), relationship_span), ..tokens] -> {
@@ -37,7 +44,7 @@ pub fn parse(
         tokens,
         relationship_span,
       ))
-      parse(tokens, entities, [relationship, ..relationships])
+      do_parse(tokens, entities, [relationship, ..relationships])
     }
 
     [#(_, span), ..] ->

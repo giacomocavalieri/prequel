@@ -10,7 +10,7 @@ import prequel/ast.{
   Total, Unbounded,
 }
 
-pub fn pretty(module: Module) -> String {
+pub fn format(module: Module) -> String {
   let entities =
     module.entities
     |> list.map(pretty_entity(_, 0))

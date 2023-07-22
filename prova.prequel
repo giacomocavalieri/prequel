@@ -1,6 +1,17 @@
-entity test {
-  -* attr1 & ()
+entity person {
+  -* id
 
-  -o attr1
-  -o attr2
+  -o first_name : int
+  -o last_name : int
+
+  total disjoint hierarchy {
+    entity student {
+      -* badge_number
+    }
+  }
+}
+
+relationship student_in_classroom {
+  -> student : (1-2)
+  -> classroom : (0-N)
 }

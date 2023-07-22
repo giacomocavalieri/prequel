@@ -54,14 +54,15 @@ pub type Attribute {
 /// The cardinality of an attribute or of an entity in a relationship.
 /// 
 pub type Cardinality {
+  /// A cardinality where the upper bound is the letter `N`,
+  /// for example `(1-N)`, `(0-N)` are both unbounded.
+  ///
+  Unbounded(span: Option(Span), lower_bound: Int)
+
   /// A cardinality where both upper and lower bound are numbers,
   /// for example `(0-1)`, `(1-1)` are both bounded.
   /// 
-  Unbounded(span: Option(Span), minimum: Int)
-
-  /// A cardinality where the upper bound is the letter `N`,
-  /// for example `(1-N)`, `(0-N)` are both unbounded.
-  Bounded(span: Option(Span), minimum: Int, maximum: Int)
+  Bounded(span: Option(Span), lower_bound: Int, upper_bound: Int)
 }
 
 /// The type of an attribute.
