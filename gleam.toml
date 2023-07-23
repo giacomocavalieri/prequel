@@ -2,8 +2,8 @@ name = "prequel"
 version = "0.1.0"
 description = "A markup language to define ER schemas"
 
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "username", repo = "project" }
+licences = ["MIT"]
+repository = { type = "github", user = "giacomocavalieri", repo = "project" }
 # links = [{ title = "Website", href = "https://gleam.run" }]
 
 [dependencies]
