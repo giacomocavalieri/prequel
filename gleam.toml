@@ -6,6 +6,11 @@ licences = ["MIT"]
 repository = { type = "github", user = "giacomocavalieri", repo = "prequel" }
 # links = [{ title = "Website", href = "https://gleam.run" }]
 
+internal_modules = [
+  "prequel/internals",
+  "prequel/internals/*",
+]
+
 [dependencies]
 gleam_stdlib = "~> 0.30"
 non_empty_list = "~> 1.1"
