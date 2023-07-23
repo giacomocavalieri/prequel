@@ -3,7 +3,7 @@ version = "0.1.0"
 description = "A markup language to define ER schemas"
 
 licences = ["MIT"]
-repository = { type = "github", user = "giacomocavalieri", repo = "project" }
+repository = { type = "github", user = "giacomocavalieri", repo = "prequel" }
 # links = [{ title = "Website", href = "https://gleam.run" }]
 
 [dependencies]
