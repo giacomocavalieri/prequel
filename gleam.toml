@@ -8,7 +8,7 @@ repository = { type = "github", user = "giacomocavalieri", repo = "project" }
 
 [dependencies]
 gleam_stdlib = "~> 0.30"
-non_empty_list = "~> 1.0"
+non_empty_list = "~> 1.1"
 gleam_community_ansi = "~> 1.1"
 
 [dev-dependencies]
