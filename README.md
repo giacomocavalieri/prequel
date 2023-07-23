@@ -1,7 +1,7 @@
-# er
+# prequel
 
-[![Package Version](https://img.shields.io/hexpm/v/er)](https://hex.pm/packages/er)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/er/)
+[![Package Version](https://img.shields.io/hexpm/v/prequel)](https://hex.pm/packages/prequel)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/prequel/)
 
 A Gleam project
 
@@ -18,7 +18,7 @@ gleam shell # Run an Erlang shell
 If available on Hex this package can be added to your Gleam project:
 
 ```sh
-gleam add er
+gleam add prequel
 ```
 
-and its documentation can be found at <https://hexdocs.pm/er>.
+and its documentation can be found at <https://hexdocs.pm/prequel>.
