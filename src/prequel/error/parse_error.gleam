@@ -213,7 +213,9 @@ pub fn to_report(
 /// 
 fn code(of error: ParseError) -> String {
   case error {
-    WrongEntityName(_, _, _, _, _, _) -> "PE001"
+    // TODO REWRITE EVERYTHING WITH NICE PATTERN MATCHING YOU DUMMY!
+    // https://exercism.org/tracks/gleam/concepts/labelled-fields
+    WrongEntityName(..) -> "PE001"
     MoreThanOneHierarchy(_, _, _, _) -> "PE002"
     PossibleCircleLollipopTypo(_, _, _) -> "PE003"
     PossibleStarLollipopTypo(_, _, _) -> "PE004"
