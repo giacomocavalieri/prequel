@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/list
 import gleam/option.{None, Option, Some}
+import gleam/pair
 import non_empty_list.{NonEmptyList}
 import prequel/ast.{
   Attribute, Bounded, Cardinality, Entity, Hierarchy, Module, Relationship,
@@ -76,8 +77,13 @@ fn cardinalities_from_relationship(
 /// 
 fn cardinalities_from_entity(entity: Entity) -> List(#(Span, Cardinality)) {
   let Entity(span, _, _, attributes, inner_relationships, children) = entity
+  // We take the cardinalities from the inner relationships and use the
+  // entity as the enclosing definition instead of the inner relatinpship
+  // itself.
   let inner_relationship_cardinalities =
     list.flat_map(inner_relationships, cardinalities_from_relationship)
+    |> list.map(fn(pair) { #(entity.span, pair.1) })
+
   let children_cardinalities = case children {
     None -> []
     Some(Hierarchy(_, _, _, children)) ->
@@ -180,24 +186,15 @@ fn check_all_relationships_have_different_names(
   |> list_extra.map_pairs(to_duplicate_relationship_error)
 }
 
+// TODO: sistemare: decidere se prendere TUTTE le entità e di quelle le relazioni
+// o se prendere solo le top level e poi per ognuna recuperare le relazioni
 fn relationships_from_module(module: Module) -> List(Relationship) {
   let top_level_relationships = module.relationships
   let all_entities = entities_from_module(module)
   let inner_relationships =
-    list.flat_map(all_entities, relationships_from_entity)
+    list.flat_map(all_entities, fn(entity) { entity.inner_relationships })
 
   list.append(top_level_relationships, inner_relationships)
-}
-
-fn relationships_from_entity(entity: Entity) -> List(Relationship) {
-  let sub_relationships = case entity.children {
-    Some(hierarchy) ->
-      non_empty_list.to_list(hierarchy.children)
-      |> list.flat_map(relationships_from_entity)
-    None -> []
-  }
-
-  list.append(entity.inner_relationships, sub_relationships)
 }
 
 fn to_duplicate_relationship_error(

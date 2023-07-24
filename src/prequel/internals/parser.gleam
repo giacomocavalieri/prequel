@@ -688,7 +688,7 @@ fn parse_multi_attribute_key(
 }
 
 /// Parses a relationship shorthand after finding a `->` inside a relationship
-/// body.
+/// body. 
 /// 
 fn parse_inner_relationship(
   tokens: List(#(Token, Span)),
@@ -1094,7 +1094,6 @@ fn parse_relationship(
 }
 
 /// Parses the body of a relationship after finding a `{`.
-/// 
 /// 
 fn parse_relationship_body(
   tokens: List(#(Token, Span)),

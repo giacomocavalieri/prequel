@@ -1,38 +1,23 @@
 entity person {
-  -* id
+  -* id & prova
 
   -o first_name
   -o last_name
 
-  
-
-  
-
   total disjoint hierarchy {
     entity student {
-      -* badge_number
+      -* prova 
+
+      -> in_classroom : (2-1) classroom (0-N) {
+        -o seat_number
+      }
     }
   }
 }
 
-entity prova {
-          -> prova : (1-1) pippo (0-1) 
 
-  total disjoint hierarchy {
-    entity pippo {
-        
-    }
-  }
-}
-
-relationship prova {
-  -> a : (1-1)
-  -> b : (1-1)
-}
-
-entity person
-
-relationship student_in_classroom {
-  -> student : (1-2)
-  -> classroom : (0-N)
+entity classroom {
+  -* number & letter
+  -o number
+  -o letter
 }
