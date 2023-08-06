@@ -15,9 +15,20 @@ entity person {
   }
 }
 
+entity prova {
+  total disjoint hierarchy {
+    entity pippo {
+        
+    }
+  }
+}
 
-entity classroom {
-  -* number & letter
-  -o number
-  -o letter
+relationship prova {
+  -> a : (1-1)
+  -> b : (1-1)
+}
+
+relationship student_in_classroom {
+  -> student : (1-2)
+  -> classroom : (0-N)
 }

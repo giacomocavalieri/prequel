@@ -1,5 +1,6 @@
 import gleam/int
 import gleam/list
+import gleam/map.{Map}
 import gleam/option.{None, Option, Some}
 import gleam/pair
 import non_empty_list.{NonEmptyList}
@@ -20,6 +21,25 @@ pub fn check_module(module: Module) -> List(ValidationError) {
     check_all_relationships_have_different_names,
   ]
   |> gather_errors(from: module)
+}
+
+type CheckEntityContext {
+  CheckEntityContext(
+    connected_relationships: Map(String, Relationship),
+    parents: List(Entity),
+  )
+}
+
+/// Check if a single entity is valid:
+/// - it must be qualified (meaning one of its parents is, or it has a key)
+/// - check the validity of its key
+/// - it must not contain duplicate attributes (even considering those
+///   defined by its parents)
+fn check_entity(
+  context: CheckEntityContext,
+  entity: Entity,
+) -> List(ValidationError) {
+  todo
 }
 
 /// Given a list of validation steps (functions from module to a list of
