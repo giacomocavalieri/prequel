@@ -223,6 +223,8 @@ fn scan_number(
   content: String,
 ) -> #(String, Int, String) {
   case content {
+    // TODO: refactor this once https://github.com/gleam-lang/gleam/issues/2243
+    // closed
     "0" <> rest -> scan_number(string_builder.append(acc, "0"), size + 1, rest)
     "1" <> rest -> scan_number(string_builder.append(acc, "1"), size + 1, rest)
     "2" <> rest -> scan_number(string_builder.append(acc, "2"), size + 1, rest)
